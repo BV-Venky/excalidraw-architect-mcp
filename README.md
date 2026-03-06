@@ -34,13 +34,13 @@ Tell the AI *what* to draw. This MCP handles *where* and *how*.
 ### Install
 
 ```bash
-# From source (recommended for now)
-git clone https://github.com/BV-Venky/excalidraw-architect-mcp.git
-cd excalidraw-architect-mcp
-uv pip install .
+pip install excalidraw-architect-mcp
+```
 
-# Or with pip
-pip install git+https://github.com/BV-Venky/excalidraw-architect-mcp.git
+Or run without installing (requires [uv](https://docs.astral.sh/uv/)):
+
+```bash
+uvx excalidraw-architect-mcp
 ```
 
 ### Configure MCP in Your IDE
