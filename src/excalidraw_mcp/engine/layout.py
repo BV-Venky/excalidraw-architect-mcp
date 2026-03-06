@@ -187,6 +187,15 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
         if in_count.get(node.id, 0) == 0 and len(targets) == 1:
             leaf_sources[node.id] = targets[0]
 
+    # Skip compression when multiple leaf sources share the same child --
+    # let Sugiyama handle their relative positioning naturally.
+    child_leaf_count: dict[str, int] = {}
+    for child_id in leaf_sources.values():
+        child_leaf_count[child_id] = child_leaf_count.get(child_id, 0) + 1
+    leaf_sources = {
+        lid: cid for lid, cid in leaf_sources.items() if child_leaf_count[cid] == 1
+    }
+
     leaf_edge_ids: set[str] = set()
     for edge in graph.edges:
         if edge.from_id in leaf_sources or edge.to_id in leaf_sources:

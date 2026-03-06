@@ -54,6 +54,15 @@ excalidraw-architect-mcp = "excalidraw_mcp.server:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/excalidraw_mcp"]
 
+[tool.hatch.build.targets.sdist]
+exclude = [
+    ".github/",
+    ".skills/",
+    "showcase/",
+    "tests/",
+    "generate_showcase.py",
+]
+
 [tool.hatch.envs.default]
 dependencies = [
     "pytest>=8.0",
