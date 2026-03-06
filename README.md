@@ -62,7 +62,9 @@ pip install git+https://github.com/BV-Venky/excalidraw-architect-mcp.git
 
 ### Install the Diagram Design Skill (recommended)
 
-This repo includes a skill file that teaches the AI how to structure diagrams for the best results -- node count limits, topology rules, edge label guidelines, and common patterns.
+This repo includes a [Diagram Design Skill](.skills/excalidraw-diagram-design/SKILL.md) that teaches the AI how to structure diagrams for the best results -- node count limits, topology rules, edge label guidelines, and common patterns.
+
+**For Cursor users:**
 
 ```bash
 mkdir -p ~/.cursor/skills/excalidraw-diagram-design && \
@@ -70,7 +72,9 @@ curl -o ~/.cursor/skills/excalidraw-diagram-design/SKILL.md \
   https://raw.githubusercontent.com/BV-Venky/excalidraw-architect-mcp/main/.skills/excalidraw-diagram-design/SKILL.md
 ```
 
-The AI will automatically pick up the skill and apply it when generating diagrams. Feel free to modify the rules in `~/.cursor/skills/excalidraw-diagram-design/SKILL.md` to suit your preferences -- tweak node limits, add your own patterns, or adjust styling guidelines.
+**For other IDEs:** Download the [SKILL.md](.skills/excalidraw-diagram-design/SKILL.md) file and add it to your IDE's prompt context or system instructions.
+
+The AI will automatically pick up the skill and apply it when generating diagrams. Feel free to modify the rules to suit your preferences -- tweak node limits, add your own patterns, or adjust styling guidelines.
 
 > **A note on diagram complexity:** As the number of components and connections grows, diagrams inevitably become harder to read -- this is true for humans drawing by hand too, not just automated layout. For best results, aim for **6-15 nodes** in architecture diagrams and **10-25 nodes** in detailed flows. If your system is larger, split it into multiple focused diagrams rather than cramming everything into one.
 
