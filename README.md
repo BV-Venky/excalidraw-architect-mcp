@@ -4,6 +4,18 @@ An MCP server that generates beautiful Excalidraw architecture diagrams with per
 
 **No API keys. No local models. Works with any AI IDE that supports MCP** (Cursor, Windsurf, etc.).
 
+## Examples
+
+> All diagrams below were generated entirely by AI using this MCP -- zero manual positioning.
+
+### E-Commerce Platform Architecture
+
+![E-Commerce Platform Architecture](showcase/ecommerce_example.png)
+
+### Payment Processing Flow
+
+![Payment Processing Flow](showcase/payment_flow_example.png)
+
 ## The Problem
 
 AI IDEs generate diagrams as Mermaid or ASCII art. When they try Excalidraw, they hallucinate coordinates - boxes overlap, arrows cross, and the result needs manual cleanup.
