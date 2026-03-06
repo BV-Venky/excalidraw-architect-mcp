@@ -37,6 +37,12 @@ dev = [
     "ruff>=0.8",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
+
 [project.urls]
 Homepage = "https://github.com/BV-Venky/excalidraw-architect-mcp"
 Repository = "https://github.com/BV-Venky/excalidraw-architect-mcp"
