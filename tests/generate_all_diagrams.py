@@ -16,9 +16,13 @@ from excalidraw_mcp.engine.renderer import build_excalidraw_file, save_excalidra
 OUT = os.path.join(os.path.dirname(__file__), "sample_diagrams")
 
 
-def _build(name: str, nodes: list[Node], edges: list[Edge],
-           direction: Direction = Direction.LEFT_RIGHT,
-           theme: str = "default") -> None:
+def _build(
+    name: str,
+    nodes: list[Node],
+    edges: list[Edge],
+    direction: Direction = Direction.LEFT_RIGHT,
+    theme: str = "default",
+) -> None:
     graph = DiagramGraph(nodes=nodes, edges=edges, direction=direction)
     layout = compute_layout(graph)
     doc = build_excalidraw_file(layout, theme_name=theme, direction=direction)

@@ -745,34 +745,49 @@ def _route_edges(
             src_slot = slots.get(("src", edge_key))
             dst_slot = slots.get(("dst", edge_key))
             start, end = _edge_endpoints(
-                src, dst, direction,
-                src_slot=src_slot, dst_slot=dst_slot,
+                src,
+                dst,
+                direction,
+                src_slot=src_slot,
+                dst_slot=dst_slot,
             )
             layer_dist = abs(end[layer_axis] - start[layer_axis])
             if layer_dist < short_threshold:
                 points = [start, end]
             else:
                 obstacles = _find_obstacles(
-                    start, end, positioned_nodes,
-                    edge.from_id, edge.to_id,
+                    start,
+                    end,
+                    positioned_nodes,
+                    edge.from_id,
+                    edge.to_id,
                 )
                 if obstacles:
                     det_key = (edge.from_id, "detour")
                     idx = detour_counts.get(det_key, 0)
                     detour_counts[det_key] = idx + 1
                     points = _route_around_obstacles(
-                        start, end, obstacles, direction,
+                        start,
+                        end,
+                        obstacles,
+                        direction,
                         offset=idx * _DETOUR_SPREAD,
                     )
                     # Check if the detour path itself crosses new nodes
                     # (e.g. hub-stretched nodes not on the original line).
                     extra = _find_segment_obstacles(
-                        points, positioned_nodes,
-                        edge.from_id, edge.to_id, obstacles,
+                        points,
+                        positioned_nodes,
+                        edge.from_id,
+                        edge.to_id,
+                        obstacles,
                     )
                     if extra:
                         points = _route_around_obstacles(
-                            start, end, obstacles + extra, direction,
+                            start,
+                            end,
+                            obstacles + extra,
+                            direction,
                             offset=idx * _DETOUR_SPREAD,
                         )
                 else:
@@ -895,14 +910,8 @@ def _compute_port_slots(
         src_face = "bwd" if backward else "fwd"
         dst_face = "bwd" if not backward else "fwd"
 
-        peer_center_for_src = (
-            (dst.y + dst.height / 2) if horizontal
-            else (dst.x + dst.width / 2)
-        )
-        peer_center_for_dst = (
-            (src.y + src.height / 2) if horizontal
-            else (src.x + src.width / 2)
-        )
+        peer_center_for_src = (dst.y + dst.height / 2) if horizontal else (dst.x + dst.width / 2)
+        peer_center_for_dst = (src.y + src.height / 2) if horizontal else (src.x + src.width / 2)
 
         dep_key = (edge.from_id, src_face)
         departures.setdefault(dep_key, []).append((edge_key, peer_center_for_src))
@@ -922,7 +931,7 @@ def _compute_port_slots(
             if len(members) < 2:
                 continue
             pn = node_rects[node_id]
-            span = (pn.height if horizontal else pn.width)
+            span = pn.height if horizontal else pn.width
             lo = (pn.y if horizontal else pn.x) + m
             hi = lo + span - 2 * m
 
@@ -937,10 +946,20 @@ def _compute_port_slots(
 
     # -- pass 2: cross-face anti-crossing ----------------------------------
     _fix_cross_face_crossings(
-        arrivals, "dst", node_rects, horizontal, m, result,
+        arrivals,
+        "dst",
+        node_rects,
+        horizontal,
+        m,
+        result,
     )
     _fix_cross_face_crossings(
-        departures, "src", node_rects, horizontal, m, result,
+        departures,
+        "src",
+        node_rects,
+        horizontal,
+        m,
+        result,
     )
 
     return result
@@ -1111,9 +1130,8 @@ def _route_around_obstacles(
         obs_left = min(o.x for o in obstacles) - cl
         obs_right = max(o.x + o.width for o in obstacles) + cl
 
-        go_above = (
-            min(abs(obs_top - start[1]), abs(obs_top - end[1]))
-            <= min(abs(obs_bottom - start[1]), abs(obs_bottom - end[1]))
+        go_above = min(abs(obs_top - start[1]), abs(obs_top - end[1])) <= min(
+            abs(obs_bottom - start[1]), abs(obs_bottom - end[1])
         )
         detour_y = (obs_top - offset) if go_above else (obs_bottom + offset)
 
@@ -1135,9 +1153,8 @@ def _route_around_obstacles(
         obs_top = min(o.y for o in obstacles) - cl
         obs_bottom = max(o.y + o.height for o in obstacles) + cl
 
-        go_left = (
-            min(abs(obs_left - start[0]), abs(obs_left - end[0]))
-            <= min(abs(obs_right - start[0]), abs(obs_right - end[0]))
+        go_left = min(abs(obs_left - start[0]), abs(obs_left - end[0])) <= min(
+            abs(obs_right - start[0]), abs(obs_right - end[0])
         )
         detour_x = (obs_left - offset) if go_left else (obs_right + offset)
 
@@ -1186,19 +1203,37 @@ def _edge_endpoints(
 
     match direction:
         case Direction.LEFT_RIGHT | Direction.RIGHT_LEFT:
-            sy = src_slot if src_slot is not None else _clamp(
-                dst_cy, src.y + m, src.y + src.height - m,
+            sy = (
+                src_slot
+                if src_slot is not None
+                else _clamp(
+                    dst_cy,
+                    src.y + m,
+                    src.y + src.height - m,
+                )
             )
-            ey = dst_slot if dst_slot is not None else _clamp(
-                src_cy, dst.y + m, dst.y + dst.height - m,
+            ey = (
+                dst_slot
+                if dst_slot is not None
+                else _clamp(
+                    src_cy,
+                    dst.y + m,
+                    dst.y + dst.height - m,
+                )
             )
             if src_is_diamond:
                 sy_off = _diamond_border_offset(
-                    sy, src_cy, src.width / 2, src.height / 2,
+                    sy,
+                    src_cy,
+                    src.width / 2,
+                    src.height / 2,
                 )
             if dst_is_diamond:
                 ey_off = _diamond_border_offset(
-                    ey, dst_cy, dst.width / 2, dst.height / 2,
+                    ey,
+                    dst_cy,
+                    dst.width / 2,
+                    dst.height / 2,
                 )
             if direction is Direction.LEFT_RIGHT:
                 if backward:
@@ -1224,19 +1259,37 @@ def _edge_endpoints(
                     end = (ex, ey)
 
         case Direction.BOTTOM_UP | _:
-            sx = src_slot if src_slot is not None else _clamp(
-                dst_cx, src.x + m, src.x + src.width - m,
+            sx = (
+                src_slot
+                if src_slot is not None
+                else _clamp(
+                    dst_cx,
+                    src.x + m,
+                    src.x + src.width - m,
+                )
             )
-            ex = dst_slot if dst_slot is not None else _clamp(
-                src_cx, dst.x + m, dst.x + dst.width - m,
+            ex = (
+                dst_slot
+                if dst_slot is not None
+                else _clamp(
+                    src_cx,
+                    dst.x + m,
+                    dst.x + dst.width - m,
+                )
             )
             if src_is_diamond:
                 sx_off = _diamond_border_offset(
-                    sx, src_cx, src.width / 2, src.height / 2,
+                    sx,
+                    src_cx,
+                    src.width / 2,
+                    src.height / 2,
                 )
             if dst_is_diamond:
                 ex_off = _diamond_border_offset(
-                    ex, dst_cx, dst.width / 2, dst.height / 2,
+                    ex,
+                    dst_cx,
+                    dst.width / 2,
+                    dst.height / 2,
                 )
             if direction is Direction.BOTTOM_UP:
                 if backward:
