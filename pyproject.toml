@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "excalidraw-architect-mcp"
+version = "0.1.0"
+description = "An MCP server that generates beautiful Excalidraw architecture diagrams with perfect auto-layout, stateful editing, and architecture-aware component styling."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Bhukya Venkatesh" },
+]
+keywords = ["excalidraw", "mcp", "diagram", "architecture", "mermaid"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Documentation",
+]
+dependencies = [
+    "fastmcp>=2.0",
+    "pydantic>=2.0",
+    "grandalf>=0.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
+
+[project.urls]
+Homepage = "https://github.com/BV-Venky/excalidraw-architect-mcp"
+Repository = "https://github.com/BV-Venky/excalidraw-architect-mcp"
+Issues = "https://github.com/BV-Venky/excalidraw-architect-mcp/issues"
+
+[project.scripts]
+excalidraw-architect-mcp = "excalidraw_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/excalidraw_mcp"]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+lint = "ruff check src/ tests/"
+format = "ruff format src/ tests/"
+check = ["lint", "ruff format --check src/ tests/"]
+fix = ["ruff check --fix src/ tests/", "format"]
+serve = "python -m excalidraw_mcp"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
