@@ -86,6 +86,10 @@ Just ask your AI IDE naturally:
 
 > "Create an architecture diagram for a microservices system with an API Gateway, Auth Service, User Service, Order Service, PostgreSQL, Redis cache, and Kafka event bus"
 
+> "Convert this mermaid diagram to excalidraw diagram"
+
+> "Add a Caching layer to the Order Service in the High Level architecture diagram"
+
 The AI calls the MCP tool with the relationship map. The MCP handles layout, styling, and output. Open the resulting `.excalidraw` file with the [Excalidraw VS Code extension](https://marketplace.visualstudio.com/items?itemName=pomdtr.excalidraw-editor) or drag it into [excalidraw.com](https://excalidraw.com).
 
 ## Features
