@@ -44,7 +44,7 @@ BADGE_FONT_SIZE = 12
 # These are empirical averages; Excalidraw uses canvas measureText internally
 # but we need reasonable estimates for raw JSON generation.
 _CHAR_WIDTH_FACTORS: dict[int, float] = {
-    1: 0.55,  # Virgil (hand-drawn) — wider glyphs
+    1: 0.55,  # Virgil (hand-drawn) - wider glyphs
     2: 0.50,  # Helvetica
     3: 0.55,  # Cascadia (monospace)
 }

@@ -248,7 +248,7 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
 # ---------------------------------------------------------------------------
 
 
-_MIN_ARROW_ANGLE_TAN = 0.27  # tan(~15deg) — minimum arrow steepness
+_MIN_ARROW_ANGLE_TAN = 0.27  # tan(~15deg) - minimum arrow steepness
 
 
 def _apply_adaptive_layer_gaps(
@@ -258,7 +258,7 @@ def _apply_adaptive_layer_gaps(
 ) -> None:
     """Re-space layers so each gap fits the widest edge label crossing it.
 
-    Gaps are clamped to [MIN_LAYER_GAP, MAX_LAYER_GAP] — a paragraph on an
+    Gaps are clamped to [MIN_LAYER_GAP, MAX_LAYER_GAP] - a paragraph on an
     arrow won't stretch the diagram into scroll-territory, while a short
     label like "events" gets just the room it needs.
 
@@ -500,7 +500,7 @@ def _resolve_all_overlaps(
     """Push apart any overlapping nodes within the same layer.
 
     Unlike ``_resolve_hub_overlaps`` (which only fixes hub-vs-node conflicts),
-    this handles **any** pair of nodes that ended up on top of each other —
+    this handles **any** pair of nodes that ended up on top of each other -
     typically caused by grandalf placing multiple children of a high-fan-out
     parent at nearly the same position.
     """
@@ -883,9 +883,9 @@ def _compute_port_slots(
     (a y-coordinate for LR/RL, x-coordinate for TD/BU).
 
     Two passes:
-      1. Per-face distribution — edges sharing a face get sorted by peer
+      1. Per-face distribution - edges sharing a face get sorted by peer
          position and evenly spaced.  Single-edge faces are left untouched.
-      2. Cross-face anti-crossing — if arrows on *different* faces of the
+      2. Cross-face anti-crossing - if arrows on *different* faces of the
          same node would cross, their positions are redistributed evenly
          across the full node span.  Arrows that don't cross are never
          moved, so common cases stay natural.
@@ -1087,7 +1087,7 @@ def _find_obstacles(
             if y_hi < n_top or y_lo > n_bottom:
                 continue
         else:
-            # Vertical line — check x containment
+            # Vertical line - check x containment
             if sx < n_left or sx > n_right:
                 continue
             if dy != 0:

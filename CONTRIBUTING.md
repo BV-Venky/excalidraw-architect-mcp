@@ -19,7 +19,7 @@ cd excalidraw-architect-mcp
 hatch run test
 ```
 
-No manual `pip install` or venv setup needed — hatch handles it all on first run.
+No manual `pip install` or venv setup needed - hatch handles it all on first run.
 
 ### Available Commands
 
@@ -47,14 +47,14 @@ ruff format src/ tests/
 
 ```
 src/excalidraw_mcp/
-├── server.py              # MCP tool definitions — start here for new tools
+├── server.py              # MCP tool definitions - start here for new tools
 ├── core/                  # Foundation: data models + styling
-│   ├── models.py          # Pydantic models — the shared data contract
+│   ├── models.py          # Pydantic models - the shared data contract
 │   ├── components.py      # Technology → visual style registry
 │   └── themes.py          # Color themes
 ├── engine/                # Computational core
-│   ├── layout.py          # Sugiyama layout engine — the core algorithm
-│   └── renderer.py        # Excalidraw JSON builder — shapes, arrows, bindings
+│   ├── layout.py          # Sugiyama layout engine - the core algorithm
+│   └── renderer.py        # Excalidraw JSON builder - shapes, arrows, bindings
 └── parsers/               # Input adapters
     ├── mermaid.py          # Mermaid flowchart parser
     └── state.py            # Stateful editing for modify_diagram
@@ -94,10 +94,10 @@ To add a technology to the component library:
 
 The layout engine lives in `engine/layout.py`. Key functions:
 
-- `compute_layout()` — main entry point
-- `_apply_adaptive_layer_gaps()` — spacing between layers
-- `_stretch_hub_nodes()` — gate-like visualization for hubs
-- `_route_edges()` / `_route_around_obstacles()` — arrow routing
+- `compute_layout()` - main entry point
+- `_apply_adaptive_layer_gaps()` - spacing between layers
+- `_stretch_hub_nodes()` - gate-like visualization for hubs
+- `_route_edges()` / `_route_around_obstacles()` - arrow routing
 
 ### Adding a New MCP Tool
 
@@ -117,7 +117,7 @@ The layout engine lives in `engine/layout.py`. Key functions:
 
 ### PR Guidelines
 
-- Keep PRs focused — one feature or fix per PR
+- Keep PRs focused - one feature or fix per PR
 - Add tests for new functionality
 - Update the README if adding user-facing features
 - Follow existing code patterns and naming conventions

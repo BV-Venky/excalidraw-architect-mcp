@@ -5,7 +5,7 @@ description: Guide for structuring graph input (nodes and edges) for the Excalid
 
 # Excalidraw Diagram Design Guide
 
-This skill teaches you how to structure the `nodes` and `connections` input for the Excalidraw Architect MCP so the auto-layout engine produces clean, readable diagrams — not spaghetti.
+This skill teaches you how to structure the `nodes` and `connections` input for the Excalidraw Architect MCP so the auto-layout engine produces clean, readable diagrams - not spaghetti.
 
 ## Core Principle
 
@@ -13,7 +13,7 @@ The layout engine (Sugiyama algorithm) works best with **tree-like, flow-oriente
 
 ## Graph Topology Rules
 
-### 1. Keep it tree-like — avoid diamond dependencies
+### 1. Keep it tree-like - avoid diamond dependencies
 
 The #1 cause of messy diagrams is multiple nodes connecting to the same shared target.
 
@@ -35,14 +35,14 @@ GOOD: Drop shared infrastructure nodes or show them as a single grouped leaf
 Show how data moves through the system, not every `import` statement.
 
 ```
-BAD (16 edges for 12 nodes — dependency graph):
+BAD (16 edges for 12 nodes - dependency graph):
   server → mermaid, state, layout, excalidraw
   mermaid → models
   state → models, excalidraw_file
   layout → models, grandalf, components
   excalidraw → models, components, themes, excalidraw_file
 
-GOOD (9 edges for 9 nodes — data flow):
+GOOD (9 edges for 9 nodes - data flow):
   ide → server → [mermaid, state, layout]
   layout → renderer → [styling, output]
 ```
@@ -108,7 +108,7 @@ The tool auto-detects technology from labels, but explicit `component_type` is m
 | Service deep-dive (internals, sub-components) | 15–30 |
 | Simple sequence | 5–9 |
 
-For diagrams with 20+ nodes, keep labels to **1–2 lines max** — long multi-line labels inflate node sizes and trigger unnecessary obstacle detours. Prefer short, scannable labels (e.g., `DynamoDB: orders` instead of `DynamoDB OrdersTable\n(partition: order_id)`).
+For diagrams with 20+ nodes, keep labels to **1–2 lines max** - long multi-line labels inflate node sizes and trigger unnecessary obstacle detours. Prefer short, scannable labels (e.g., `DynamoDB: orders` instead of `DynamoDB OrdersTable\n(partition: order_id)`).
 
 ## Edge Design
 
@@ -155,14 +155,14 @@ Linear chain, optionally with one fork-merge.
 Input → Process → [Branch A, Branch B] → Merge → Output
 ```
 
-Creates a diamond shape — keep it to ONE fork-merge per diagram.
+Creates a diamond shape - keep it to ONE fork-merge per diagram.
 
 ### Pattern 4: Layered architecture
 
 ```
 Client → Load Balancer → [Services] → [Databases]
                                      → [Caches]
-Monitoring → [Prometheus, Grafana]  (disconnected — auto-stacked)
+Monitoring → [Prometheus, Grafana]  (disconnected - auto-stacked)
 ```
 
 ## Anti-Patterns

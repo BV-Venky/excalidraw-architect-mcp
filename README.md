@@ -6,16 +6,16 @@ An MCP server that generates beautiful Excalidraw architecture diagrams with per
 
 ## The Problem
 
-AI IDEs generate diagrams as Mermaid or ASCII art. When they try Excalidraw, they hallucinate coordinates — boxes overlap, arrows cross, and the result needs manual cleanup.
+AI IDEs generate diagrams as Mermaid or ASCII art. When they try Excalidraw, they hallucinate coordinates - boxes overlap, arrows cross, and the result needs manual cleanup.
 
 ## The Solution
 
 Tell the AI *what* to draw. This MCP handles *where* and *how*.
 
-- **Perfect layouts every time** — Sugiyama algorithm with adaptive spacing; no overlapping boxes
-- **Architecture-aware styling** — Say "Kafka" and get a stream-styled node, not a generic rectangle
-- **Talk to your diagrams** — Add, remove, or rewire components on an existing diagram with natural language
-- **Hub node visualization** — Gateways and load balancers auto-stretch to span their connected services
+- **Perfect layouts every time** - Sugiyama algorithm with adaptive spacing; no overlapping boxes
+- **Architecture-aware styling** - Say "Kafka" and get a stream-styled node, not a generic rectangle
+- **Talk to your diagrams** - Add, remove, or rewire components on an existing diagram with natural language
+- **Hub node visualization** - Gateways and load balancers auto-stretch to span their connected services
 
 ## Quick Start
 
@@ -33,7 +33,7 @@ pip install git+https://github.com/BV-Venky/excalidraw-architect-mcp.git
 
 ### Configure MCP in Your IDE
 
-**Cursor** — Add to `.cursor/mcp.json`:
+**Cursor** - Add to `.cursor/mcp.json`:
 
 ```json
 {
@@ -46,7 +46,7 @@ pip install git+https://github.com/BV-Venky/excalidraw-architect-mcp.git
 }
 ```
 
-**Windsurf / Other IDEs** — Same pattern; point to the `excalidraw-architect-mcp` command over stdio.
+**Windsurf / Other IDEs** - Same pattern; point to the `excalidraw-architect-mcp` command over stdio.
 
 ### Use It
 
@@ -62,10 +62,10 @@ The AI calls the MCP tool with the relationship map. The MCP handles layout, sty
 
 Uses the Sugiyama hierarchical layout algorithm with:
 
-- **Adaptive layer gaps** — spacing adjusts based on edge label length
-- **Hub node stretching** — gateways/load balancers stretch to span connected services
-- **Obstacle-aware edge routing** — arrows curve around intermediate nodes instead of cutting through them
-- **Disconnected component stacking** — separate subgraphs (e.g., monitoring stack) are placed without overlap
+- **Adaptive layer gaps** - spacing adjusts based on edge label length
+- **Hub node stretching** - gateways/load balancers stretch to span connected services
+- **Obstacle-aware edge routing** - arrows curve around intermediate nodes instead of cutting through them
+- **Disconnected component stacking** - separate subgraphs (e.g., monitoring stack) are placed without overlap
 
 ### Component Library
 
@@ -137,7 +137,7 @@ AI IDE ──MCP──▶ server.py ──▶ engine/layout.py ──▶ engine/
                                     obstacle routing
 ```
 
-The AI IDE's LLM provides the *what* (nodes and connections). The MCP server handles the *how* (layout, styling, rendering). No AI inference happens in the MCP — all reasoning is done by the IDE's built-in model.
+The AI IDE's LLM provides the *what* (nodes and connections). The MCP server handles the *how* (layout, styling, rendering). No AI inference happens in the MCP - all reasoning is done by the IDE's built-in model.
 
 ## Development
 
@@ -165,7 +165,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full list of commands and guideli
 
 ```
 src/excalidraw_mcp/
-├── server.py              # FastMCP server — exposes 4 MCP tools
+├── server.py              # FastMCP server - exposes 4 MCP tools
 ├── core/                  # Foundation: data models + styling
 │   ├── models.py          # Pydantic models (DiagramGraph, LayoutResult, etc.)
 │   ├── components.py      # Technology → visual style mapping (50+ components)
@@ -184,4 +184,4 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).

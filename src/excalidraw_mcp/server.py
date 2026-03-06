@@ -58,7 +58,7 @@ def create_diagram(
 ) -> str:
     """Create a new Excalidraw diagram from structured node and connection data.
 
-    The LLM provides a relationship map — this tool handles layout, styling,
+    The LLM provides a relationship map - this tool handles layout, styling,
     and rendering. No need to specify coordinates.
 
     Args:
@@ -68,7 +68,7 @@ def create_diagram(
             - component_type (str, optional): Technology name for auto-styling
               (e.g., "kafka", "postgresql", "redis", "nginx", "kubernetes").
               If omitted, the label is used for auto-detection.
-            - shape (str, optional): Override shape — "rectangle", "diamond",
+            - shape (str, optional): Override shape - "rectangle", "diamond",
               "ellipse", "circle", "stadium", "parallelogram"
         connections: List of connections. Each dict has:
             - from_id (str, required): Source node id
@@ -76,9 +76,9 @@ def create_diagram(
             - label (str, optional): Edge label text
             - style (str, optional): "solid", "dashed", "dotted", "thick"
         output_path: File path to save the .excalidraw file (e.g., "./arch.excalidraw")
-        direction: Layout direction — "LR" (left-right), "TD" (top-down),
+        direction: Layout direction - "LR" (left-right), "TD" (top-down),
                    "BT" (bottom-up), "RL" (right-left). Default: "LR"
-        theme: Color theme — "default", "dark", "colorful". Default: "default"
+        theme: Color theme - "default", "dark", "colorful". Default: "default"
 
     Returns:
         Summary of the created diagram with file path.
@@ -157,7 +157,7 @@ def mermaid_to_excalidraw(
     Args:
         mermaid_syntax: Mermaid flowchart source code.
         output_path: File path to save the .excalidraw file.
-        theme: Color theme — "default", "dark", "colorful". Default: "default"
+        theme: Color theme - "default", "dark", "colorful". Default: "default"
 
     Returns:
         Summary of the converted diagram.
@@ -192,7 +192,7 @@ def modify_diagram(
     """Modify an existing Excalidraw diagram created by this tool.
 
     Supports iterative editing: add components, remove nodes, update labels,
-    and rewire connections — without recreating the entire diagram.
+    and rewire connections - without recreating the entire diagram.
 
     IMPORTANT: Call get_diagram_info first to understand the current diagram
     state before making modifications.

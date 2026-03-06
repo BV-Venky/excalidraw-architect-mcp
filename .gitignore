@@ -23,5 +23,3 @@ htmlcov/
 Thumbs.db
 uv.lock
 *.excalidraw
-!sample_diagrams/*.excalidraw
-!tests/fixtures/*.excalidraw
