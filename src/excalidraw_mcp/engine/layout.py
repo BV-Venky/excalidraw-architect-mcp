@@ -22,6 +22,7 @@ from excalidraw_mcp.core.models import (
     DiagramGraph,
     Direction,
     Edge,
+    EdgeStyle,
     LayoutResult,
     Node,
     PositionedEdge,
@@ -54,6 +55,21 @@ COMPONENT_GAP = 80.0  # extra space between disconnected sub-graphs
 # auto-stretch to span their connected peers.
 HUB_THRESHOLD = 3
 HUB_PADDING = 20.0
+MAX_HUB_STRETCH = 5.0  # hub nodes stretch at most this factor of their natural size
+
+# Tracks original (pre-stretch) sizes so repeated stretch calls don't compound.
+_hub_natural_sizes: dict[str, tuple[float, float]] = {}
+
+# Fan-out targets of hub nodes get extra spacing for clean arrow divergence.
+HUB_FAN_GAP = SIBLING_GAP * 2.0
+
+# Extra gap between auxiliary (non-solid-edge-only) nodes and core nodes.
+AUXILIARY_EXTRA_GAP = COMPONENT_GAP
+
+# Long diagonal arrows get a gentle arc when the sibling distance exceeds
+# this fraction of the layer distance and the layer span is large enough.
+_ARC_LAYER_THRESHOLD = MIN_LAYER_GAP * 2.5
+_ARC_SIBLING_RATIO = 0.5
 
 # Arrows stay this far from node corners to avoid visual clipping.
 EDGE_MARGIN = 8.0
@@ -146,6 +162,8 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
     if not graph.nodes:
         return LayoutResult()
 
+    _hub_natural_sizes.clear()
+
     direction = graph.direction
     horizontal = _is_horizontal(direction)
 
@@ -153,8 +171,32 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
     for node in graph.nodes:
         node_sizes[node.id] = _estimate_node_size(node)
 
-    vertices: dict[str, GVertex] = {}
+    # --- entry-point compression: remove leaf sources from Sugiyama -----
+    # Leaf sources (0 incoming, exactly 1 outgoing) waste a full layer.
+    # Exclude them from grandalf so their child moves up to a shallower
+    # layer, then re-insert them as compact prefixes after layout.
+    in_count: dict[str, int] = {}
+    out_targets: dict[str, list[str]] = {}
+    for edge in graph.edges:
+        in_count[edge.to_id] = in_count.get(edge.to_id, 0) + 1
+        out_targets.setdefault(edge.from_id, []).append(edge.to_id)
+
+    leaf_sources: dict[str, str] = {}  # leaf_id -> child_id
     for node in graph.nodes:
+        targets = out_targets.get(node.id, [])
+        if in_count.get(node.id, 0) == 0 and len(targets) == 1:
+            leaf_sources[node.id] = targets[0]
+
+    leaf_edge_ids: set[str] = set()
+    for edge in graph.edges:
+        if edge.from_id in leaf_sources or edge.to_id in leaf_sources:
+            leaf_edge_ids.add(f"{edge.from_id}->{edge.to_id}")
+
+    layout_nodes = [n for n in graph.nodes if n.id not in leaf_sources]
+    layout_edges = [e for e in graph.edges if f"{e.from_id}->{e.to_id}" not in leaf_edge_ids]
+
+    vertices: dict[str, GVertex] = {}
+    for node in layout_nodes:
         w, h = node_sizes[node.id]
         v = GVertex(node.id)
         if horizontal:
@@ -164,7 +206,7 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
         vertices[node.id] = v
 
     g_edges: list[GEdge] = []
-    for edge in graph.edges:
+    for edge in layout_edges:
         if edge.from_id in vertices and edge.to_id in vertices:
             g_edges.append(GEdge(vertices[edge.from_id], vertices[edge.to_id]))
 
@@ -197,7 +239,7 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
 
     # --- transform to screen coordinates --------------------------------
     positioned_nodes: list[PositionedNode] = []
-    for node in graph.nodes:
+    for node in layout_nodes:
         w, h = node_sizes[node.id]
         cx, cy = grandalf_centers.get(node.id, (0.0, 0.0))
         x, y = _transform_coords(cx, cy, direction)
@@ -206,23 +248,49 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
         )
 
     # --- content-adaptive layer gaps ------------------------------------
-    _apply_adaptive_layer_gaps(positioned_nodes, graph.edges, direction)
+    _apply_adaptive_layer_gaps(positioned_nodes, layout_edges, direction)
 
     # --- stretch hub nodes (fan-out / fan-in gates) ---------------------
-    _stretch_hub_nodes(positioned_nodes, graph.edges, direction)
+    _stretch_hub_nodes(positioned_nodes, layout_edges, direction)
 
     # --- resolve any remaining node-vs-node overlaps --------------------
     _resolve_all_overlaps(positioned_nodes, direction)
 
-    # Re-stretch hubs: overlap resolution may have pushed children apart,
-    # so hub bars need to widen to still span them all.
-    _stretch_hub_nodes(positioned_nodes, graph.edges, direction)
+    # --- generous spacing for hub fan-out targets -----------------------
+    _space_hub_fanout_targets(positioned_nodes, layout_edges, direction)
+    _resolve_all_overlaps(positioned_nodes, direction)
+
+    # Re-stretch hubs: spacing may have pushed children apart.
+    _stretch_hub_nodes(positioned_nodes, layout_edges, direction)
 
     # --- spread siblings whose fan-out labels would collide ---------------
-    _spread_for_label_collisions(positioned_nodes, graph.edges, direction)
+    _spread_for_label_collisions(positioned_nodes, layout_edges, direction)
     _resolve_all_overlaps(positioned_nodes, direction)
-    _stretch_hub_nodes(positioned_nodes, graph.edges, direction)
+    _stretch_hub_nodes(positioned_nodes, layout_edges, direction)
     _resolve_all_overlaps(positioned_nodes, direction)
+
+    # --- displace auxiliary nodes to periphery --------------------------
+    _displace_auxiliary_nodes(positioned_nodes, layout_edges, direction)
+    _resolve_all_overlaps(positioned_nodes, direction)
+
+    # --- re-insert leaf sources as compact prefixes ---------------------
+    if leaf_sources:
+        node_map = {pn.node.id: pn for pn in positioned_nodes}
+        leaf_node_objs = {n.id: n for n in graph.nodes if n.id in leaf_sources}
+        for leaf_id, child_id in leaf_sources.items():
+            child = node_map.get(child_id)
+            if child is None:
+                continue
+            leaf_node = leaf_node_objs[leaf_id]
+            w, h = node_sizes[leaf_id]
+            if horizontal:
+                x = child.x - w - MIN_LAYER_GAP
+                y = child.y + child.height / 2 - h / 2
+            else:
+                x = child.x + child.width / 2 - w / 2
+                y = child.y - h - MIN_LAYER_GAP
+            positioned_nodes.append(PositionedNode(node=leaf_node, x=x, y=y, width=w, height=h))
+        _resolve_all_overlaps(positioned_nodes, direction)
 
     _normalize_positions(positioned_nodes)
     positioned_edges = _route_edges(graph.edges, positioned_nodes, direction)
@@ -322,16 +390,17 @@ def _apply_adaptive_layer_gaps(
             tl = node_layer.get(edge.to_id)
             if fl is None or tl is None:
                 continue
-            src_layer, dst_layer = (fl, tl) if fl < tl else (tl, fl)
-            if src_layer != i or dst_layer != i + 1:
+            lo, hi = (fl, tl) if fl < tl else (tl, fl)
+            if not (lo <= i < hi):
                 continue
             src_pn = node_map.get(edge.from_id)
             dst_pn = node_map.get(edge.to_id)
             if src_pn is None or dst_pn is None:
                 continue
             sibling_dist = abs(_sibling_center(src_pn) - _sibling_center(dst_pn))
-            angle_gap = sibling_dist * _MIN_ARROW_ANGLE_TAN
-            desired_gaps[i] = max(desired_gaps[i], min(angle_gap, MAX_LAYER_GAP))
+            num_gaps = hi - lo
+            per_gap = sibling_dist * _MIN_ARROW_ANGLE_TAN / num_gaps
+            desired_gaps[i] = max(desired_gaps[i], min(per_gap, MAX_LAYER_GAP))
 
     # Recompute layer center positions using adaptive gaps
     new_centers = [unique_layers[0]]
@@ -401,20 +470,30 @@ def _stretch_hub_nodes(
         if not peers:
             continue
 
+        if nid not in _hub_natural_sizes:
+            _hub_natural_sizes[nid] = (pn.width, pn.height)
+        nat_w, nat_h = _hub_natural_sizes[nid]
+
         if horizontal:
             span_top = min(p.y for p in peers) - HUB_PADDING
             span_bottom = max(p.y + p.height for p in peers) + HUB_PADDING
-            new_height = span_bottom - span_top
+            desired = span_bottom - span_top
+            max_size = nat_h * MAX_HUB_STRETCH
+            new_height = min(desired, max_size)
             if new_height > pn.height:
-                pn.y = span_top
+                center = (span_top + span_bottom) / 2
+                pn.y = center - new_height / 2
                 pn.height = new_height
                 hub_ids.add(nid)
         else:
             span_left = min(p.x for p in peers) - HUB_PADDING
             span_right = max(p.x + p.width for p in peers) + HUB_PADDING
-            new_width = span_right - span_left
+            desired = span_right - span_left
+            max_size = nat_w * MAX_HUB_STRETCH
+            new_width = min(desired, max_size)
             if new_width > pn.width:
-                pn.x = span_left
+                center = (span_left + span_right) / 2
+                pn.x = center - new_width / 2
                 pn.width = new_width
                 hub_ids.add(nid)
 
@@ -537,6 +616,166 @@ def _resolve_all_overlaps(
                 a_end = a.x + a.width
                 if b.x < a_end + gap:
                     b.x = a_end + gap
+
+
+# ---------------------------------------------------------------------------
+# Generous spacing for hub fan-out targets
+# ---------------------------------------------------------------------------
+
+
+def _space_hub_fanout_targets(
+    nodes: list[PositionedNode],
+    edges: list[Edge],
+    direction: Direction,
+) -> None:
+    """Ensure generous spacing between fan-out targets of hub nodes.
+
+    When a hub fans out to N targets in the same layer, those targets need
+    extra breathing room so arrows can diverge cleanly.  Uses HUB_FAN_GAP
+    (2x normal SIBLING_GAP) as the minimum edge-to-edge distance.
+    """
+    if len(nodes) <= 1:
+        return
+
+    horizontal = _is_horizontal(direction)
+    node_map = {pn.node.id: pn for pn in nodes}
+
+    def _layer_key(pn: PositionedNode) -> float:
+        return round(
+            (pn.x + pn.width / 2) if horizontal else (pn.y + pn.height / 2),
+            0,
+        )
+
+    out_targets: dict[str, list[str]] = {}
+    in_sources: dict[str, list[str]] = {}
+    for edge in edges:
+        out_targets.setdefault(edge.from_id, []).append(edge.to_id)
+        in_sources.setdefault(edge.to_id, []).append(edge.from_id)
+
+    processed: set[frozenset[str]] = set()
+
+    for nid in list(out_targets.keys()) + list(in_sources.keys()):
+        targets = out_targets.get(nid, [])
+        sources = in_sources.get(nid, [])
+
+        peer_ids: list[str] = []
+        if len(targets) >= HUB_THRESHOLD:
+            peer_ids.extend(targets)
+        if len(sources) >= HUB_THRESHOLD:
+            peer_ids.extend(sources)
+
+        if len(peer_ids) < 2:
+            continue
+
+        group_key = frozenset(peer_ids)
+        if group_key in processed:
+            continue
+        processed.add(group_key)
+
+        peers = [node_map[pid] for pid in peer_ids if pid in node_map]
+        if len(peers) < 2:
+            continue
+
+        layer_groups: dict[float, list[PositionedNode]] = {}
+        for p in peers:
+            layer_groups.setdefault(_layer_key(p), []).append(p)
+
+        for _lk, group in layer_groups.items():
+            if len(group) < 2:
+                continue
+
+            if horizontal:
+                group.sort(key=lambda p: p.y)
+                for i in range(len(group) - 1):
+                    a, b = group[i], group[i + 1]
+                    min_b = a.y + a.height + HUB_FAN_GAP
+                    if b.y < min_b:
+                        b.y = min_b
+            else:
+                group.sort(key=lambda p: p.x)
+                for i in range(len(group) - 1):
+                    a, b = group[i], group[i + 1]
+                    min_b = a.x + a.width + HUB_FAN_GAP
+                    if b.x < min_b:
+                        b.x = min_b
+
+
+# ---------------------------------------------------------------------------
+# Auxiliary node displacement
+# ---------------------------------------------------------------------------
+
+
+def _displace_auxiliary_nodes(
+    nodes: list[PositionedNode],
+    edges: list[Edge],
+    direction: Direction,
+) -> None:
+    """Push nodes connected only via non-solid edges to the periphery.
+
+    Auxiliary nodes (monitoring, alerting, event sinks) are identified by
+    having ALL their edges be dashed or dotted.  When such a node sits
+    within the bounding box of the core nodes in its layer, it is displaced
+    to the nearest edge of that bounding box with extra gap.
+    """
+    if len(nodes) < 2:
+        return
+
+    horizontal = _is_horizontal(direction)
+
+    node_edge_styles: dict[str, list[EdgeStyle]] = {}
+    for edge in edges:
+        node_edge_styles.setdefault(edge.from_id, []).append(edge.style)
+        node_edge_styles.setdefault(edge.to_id, []).append(edge.style)
+
+    auxiliary_ids: set[str] = set()
+    for nid, styles in node_edge_styles.items():
+        if all(s in (EdgeStyle.DASHED, EdgeStyle.DOTTED) for s in styles):
+            auxiliary_ids.add(nid)
+
+    if not auxiliary_ids:
+        return
+
+    def _layer_key(pn: PositionedNode) -> float:
+        return round(
+            (pn.x + pn.width / 2) if horizontal else (pn.y + pn.height / 2),
+            0,
+        )
+
+    layers: dict[float, list[PositionedNode]] = {}
+    for pn in nodes:
+        layers.setdefault(_layer_key(pn), []).append(pn)
+
+    for _lc, group in layers.items():
+        aux = [pn for pn in group if pn.node.id in auxiliary_ids]
+        main = [pn for pn in group if pn.node.id not in auxiliary_ids]
+
+        if not aux or not main:
+            continue
+
+        if horizontal:
+            main_top = min(pn.y for pn in main)
+            main_bottom = max(pn.y + pn.height for pn in main)
+            main_center = (main_top + main_bottom) / 2
+
+            for a in aux:
+                a_center = a.y + a.height / 2
+                if main_top <= a_center <= main_bottom:
+                    if a_center <= main_center:
+                        a.y = main_top - AUXILIARY_EXTRA_GAP - a.height
+                    else:
+                        a.y = main_bottom + AUXILIARY_EXTRA_GAP
+        else:
+            main_left = min(pn.x for pn in main)
+            main_right = max(pn.x + pn.width for pn in main)
+            main_center = (main_left + main_right) / 2
+
+            for a in aux:
+                a_center = a.x + a.width / 2
+                if main_left <= a_center <= main_right:
+                    if a_center <= main_center:
+                        a.x = main_left - AUXILIARY_EXTRA_GAP - a.width
+                    else:
+                        a.x = main_right + AUXILIARY_EXTRA_GAP
 
 
 # ---------------------------------------------------------------------------
@@ -792,6 +1031,7 @@ def _route_edges(
                         )
                 else:
                     points = [start, end]
+            points = _soften_long_diagonal(points, direction)
             result.append(PositionedEdge(edge=edge, points=points))
         else:
             result.append(PositionedEdge(edge=edge, points=[]))
@@ -1033,6 +1273,47 @@ def _fix_cross_face_crossings(
         for i, (ek, _peer) in enumerate(all_arrows_by_peer):
             slot = lo + (hi - lo) * (i + 1) / (n + 1)
             slots[(role, ek)] = slot
+
+
+# ---------------------------------------------------------------------------
+# Long-diagonal arc smoothing
+# ---------------------------------------------------------------------------
+
+
+def _soften_long_diagonal(
+    points: list[tuple[float, float]],
+    direction: Direction,
+) -> list[tuple[float, float]]:
+    """Insert a midpoint waypoint for long diagonal arrows.
+
+    When a straight arrow spans a large layer distance AND has a large
+    sibling-axis offset, insert a bend point that makes the path curve
+    gently rather than slashing diagonally across the canvas.
+
+    The bend is placed at 40% along the layer axis and 65% along the
+    sibling axis, creating a path that is steep near the source (where
+    arrows diverge) and levels out near the target.
+    """
+    if len(points) != 2:
+        return points
+
+    start, end = points
+    horizontal = _is_horizontal(direction)
+    layer_axis = 0 if horizontal else 1
+    sibling_axis = 1 if horizontal else 0
+
+    layer_dist = abs(end[layer_axis] - start[layer_axis])
+    sibling_dist = abs(end[sibling_axis] - start[sibling_axis])
+
+    if layer_dist < _ARC_LAYER_THRESHOLD:
+        return points
+    if sibling_dist < layer_dist * _ARC_SIBLING_RATIO:
+        return points
+
+    mid = [0.0, 0.0]
+    mid[layer_axis] = start[layer_axis] + 0.4 * (end[layer_axis] - start[layer_axis])
+    mid[sibling_axis] = start[sibling_axis] + 0.65 * (end[sibling_axis] - start[sibling_axis])
+    return [start, (mid[0], mid[1]), end]
 
 
 # ---------------------------------------------------------------------------
