@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
-      - run: uv pip install --system ruff
-      - run: ruff check src/ tests/
-      - run: ruff format --check src/ tests/
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --dev
+      - run: uv run ruff check src/ tests/
+      - run: uv run ruff format --check src/ tests/
 
   test:
     runs-on: ubuntu-latest
@@ -23,9 +23,8 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - run: uv pip install --system -e ".[dev]"
-      - run: pytest
+      - run: uv sync --dev
+      - run: uv run pytest
