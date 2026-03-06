@@ -192,9 +192,7 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
     child_leaf_count: dict[str, int] = {}
     for child_id in leaf_sources.values():
         child_leaf_count[child_id] = child_leaf_count.get(child_id, 0) + 1
-    leaf_sources = {
-        lid: cid for lid, cid in leaf_sources.items() if child_leaf_count[cid] == 1
-    }
+    leaf_sources = {lid: cid for lid, cid in leaf_sources.items() if child_leaf_count[cid] == 1}
 
     leaf_edge_ids: set[str] = set()
     for edge in graph.edges:
