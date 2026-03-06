@@ -60,11 +60,25 @@ pip install git+https://github.com/BV-Venky/excalidraw-architect-mcp.git
 
 **Windsurf / Other IDEs** - Same pattern; point to the `excalidraw-architect-mcp` command over stdio.
 
+### Install the Diagram Design Skill (recommended)
+
+This repo includes a skill file that teaches the AI how to structure diagrams for the best results -- node count limits, topology rules, edge label guidelines, and common patterns.
+
+```bash
+mkdir -p ~/.cursor/skills/excalidraw-diagram-design && \
+curl -o ~/.cursor/skills/excalidraw-diagram-design/SKILL.md \
+  https://raw.githubusercontent.com/BV-Venky/excalidraw-architect-mcp/main/.skills/excalidraw-diagram-design/SKILL.md
+```
+
+The AI will automatically pick up the skill and apply it when generating diagrams. Feel free to modify the rules in `~/.cursor/skills/excalidraw-diagram-design/SKILL.md` to suit your preferences -- tweak node limits, add your own patterns, or adjust styling guidelines.
+
+> **A note on diagram complexity:** As the number of components and connections grows, diagrams inevitably become harder to read -- this is true for humans drawing by hand too, not just automated layout. For best results, aim for **6-15 nodes** in architecture diagrams and **10-25 nodes** in detailed flows. If your system is larger, split it into multiple focused diagrams rather than cramming everything into one.
+
 ### Use It
 
 Just ask your AI IDE naturally:
 
-> "Create a High Level architecture diagram of this codebase" #When in Cursor
+> "Create a High Level architecture diagram of this codebase"
 
 > "Create an architecture diagram for a microservices system with an API Gateway, Auth Service, User Service, Order Service, PostgreSQL, Redis cache, and Kafka event bus"
 
