@@ -289,7 +289,8 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
             leaf_node = leaf_node_objs[leaf_id]
             w, h = node_sizes[leaf_id]
             label_extent = _measure_edge_label_extent(
-                leaf_edge_labels.get(leaf_id), direction,
+                leaf_edge_labels.get(leaf_id),
+                direction,
             )
             gap = max(MIN_LAYER_GAP, label_extent + MIN_LAYER_GAP * 0.5)
             if horizontal:
