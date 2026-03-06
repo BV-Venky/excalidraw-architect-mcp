@@ -6,7 +6,7 @@ An MCP server that generates beautiful Excalidraw architecture diagrams with per
 
 ## The Problem
 
-AI IDEs generate diagrams as Mermaid or ASCII art. When they try Excalidraw, they hallucinate coordinates - boxes overlap, arrows cross, and the result needs manual cleanup.
+AI IDEs/LLMs generate diagrams as Mermaid or ASCII art. When they try Excalidraw, they hallucinate coordinates - boxes overlap, arrows cross, and the result needs manual cleanup.
 
 ## The Solution
 
