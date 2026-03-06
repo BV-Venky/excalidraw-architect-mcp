@@ -275,6 +275,11 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
 
     # --- re-insert leaf sources as compact prefixes ---------------------
     if leaf_sources:
+        leaf_edge_labels: dict[str, str | None] = {}
+        for edge in graph.edges:
+            if edge.from_id in leaf_sources:
+                leaf_edge_labels[edge.from_id] = edge.label
+
         node_map = {pn.node.id: pn for pn in positioned_nodes}
         leaf_node_objs = {n.id: n for n in graph.nodes if n.id in leaf_sources}
         for leaf_id, child_id in leaf_sources.items():
@@ -283,12 +288,17 @@ def compute_layout(graph: DiagramGraph) -> LayoutResult:
                 continue
             leaf_node = leaf_node_objs[leaf_id]
             w, h = node_sizes[leaf_id]
+            label_extent = _measure_edge_label_extent(
+                leaf_edge_labels.get(leaf_id),
+                direction,
+            )
+            gap = max(MIN_LAYER_GAP, label_extent + MIN_LAYER_GAP * 0.5)
             if horizontal:
-                x = child.x - w - MIN_LAYER_GAP
+                x = child.x - w - gap
                 y = child.y + child.height / 2 - h / 2
             else:
                 x = child.x + child.width / 2 - w / 2
-                y = child.y - h - MIN_LAYER_GAP
+                y = child.y - h - gap
             positioned_nodes.append(PositionedNode(node=leaf_node, x=x, y=y, width=w, height=h))
         _resolve_all_overlaps(positioned_nodes, direction)
 

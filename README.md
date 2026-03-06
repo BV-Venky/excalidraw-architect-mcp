@@ -10,11 +10,11 @@ An MCP server that generates beautiful Excalidraw architecture diagrams with per
 
 ### E-Commerce Platform Architecture
 
-![E-Commerce Platform Architecture](showcase/ecommerce_example.png)
+![E-Commerce Platform Architecture](showcase/ecommerce_platform.png)
 
 ### Payment Processing Flow
 
-![Payment Processing Flow](showcase/payment_flow_example.png)
+![Payment Processing Flow](showcase/payment_flow.png)
 
 ## The Problem
 
