@@ -64,6 +64,8 @@ pip install git+https://github.com/BV-Venky/excalidraw-architect-mcp.git
 
 Just ask your AI IDE naturally:
 
+> "Create a High Level architecture diagram of this codebase" #When in Cursor
+
 > "Create an architecture diagram for a microservices system with an API Gateway, Auth Service, User Service, Order Service, PostgreSQL, Redis cache, and Kafka event bus"
 
 The AI calls the MCP tool with the relationship map. The MCP handles layout, styling, and output. Open the resulting `.excalidraw` file with the [Excalidraw VS Code extension](https://marketplace.visualstudio.com/items?itemName=pomdtr.excalidraw-editor) or drag it into [excalidraw.com](https://excalidraw.com).
@@ -119,23 +121,6 @@ Already have a Mermaid flowchart? Convert it:
 | `modify_diagram` | Add/remove/update nodes and connections on an existing diagram |
 | `get_diagram_info` | Read current diagram state (call before modifying) |
 
-### `create_diagram` Parameters
-
-| Parameter | Type | Description |
-|---|---|---|
-| `nodes` | `list[dict]` | Nodes with `id`, `label`, optional `component_type` and `shape` |
-| `connections` | `list[dict]` | Edges with `from_id`, `to_id`, optional `label` and `style` |
-| `output_path` | `str` | Where to save the `.excalidraw` file |
-| `direction` | `str` | `"LR"` (default), `"TD"`, `"BT"`, `"RL"` |
-| `theme` | `str` | `"default"`, `"dark"`, `"colorful"` |
-
-### Node Shapes
-
-`rectangle` (default), `diamond`, `ellipse`, `circle`, `stadium`, `parallelogram`
-
-### Edge Styles
-
-`solid` (default), `dashed`, `dotted`, `thick`
 
 ## Architecture
 
@@ -150,28 +135,6 @@ AI IDE ──MCP──▶ server.py ──▶ engine/layout.py ──▶ engine/
 ```
 
 The AI IDE's LLM provides the *what* (nodes and connections). The MCP server handles the *how* (layout, styling, rendering). No AI inference happens in the MCP - all reasoning is done by the IDE's built-in model.
-
-## Development
-
-```bash
-# Clone the repo
-git clone https://github.com/BV-Venky/excalidraw-architect-mcp.git
-cd excalidraw-architect-mcp
-
-# Run tests (hatch auto-creates the env on first run)
-hatch run test
-
-# Lint + format check (same as CI)
-hatch run check
-
-# Auto-fix lint issues + format
-hatch run fix
-
-# Start the MCP server locally
-hatch run serve
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full list of commands and guidelines.
 
 ## Project Structure
 
