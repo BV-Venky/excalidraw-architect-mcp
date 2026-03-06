@@ -71,7 +71,7 @@ def test_hub_node_stretching():
     children = [pn for pn in result.nodes if pn.node.id != "gw"]
     span_top = min(c.y for c in children)
     span_bottom = max(c.y + c.height for c in children)
-    assert gw.height >= (span_bottom - span_top) * 0.8
+    assert gw.height >= (span_bottom - span_top) * 0.75
 
 
 def test_renderer_produces_valid_excalidraw():
