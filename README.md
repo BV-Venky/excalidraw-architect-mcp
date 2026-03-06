@@ -2,7 +2,7 @@
 
 An MCP server that generates beautiful Excalidraw architecture diagrams with perfect auto-layout, stateful editing, and architecture-aware component styling.
 
-**No API keys. No local models. Works with any AI IDE that supports MCP** (Cursor, Windsurf, etc.).
+**No API keys. No local models. Works with any AI IDE that supports MCP** (Cursor, Windsurf, Antigravity etc.).
 
 ## The Problem
 
