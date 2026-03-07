@@ -1,4 +1,5 @@
 # Excalidraw Architect MCP
+<!-- mcp-name: io.github.BV-Venky/excalidraw-architect-mcp -->
 
 An MCP server that generates beautiful Excalidraw architecture diagrams with perfect auto-layout, stateful editing, and architecture-aware component styling.
 
