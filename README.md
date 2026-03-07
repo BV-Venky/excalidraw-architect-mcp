@@ -4,6 +4,10 @@ An MCP server that generates beautiful Excalidraw architecture diagrams with per
 
 **No API keys. No local models. Works with any AI IDE that supports MCP** (Cursor, Windsurf, Antigravity etc.).
 
+<a href="https://glama.ai/mcp/servers/@BV-Venky/excalidraw-architect-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@BV-Venky/excalidraw-architect-mcp/badge" alt="excalidraw-architect-mcp MCP server" />
+</a>
+
 ## The Problem
 
 AI IDEs/LLMs generate diagrams as Mermaid or ASCII art. When they try Excalidraw, they hallucinate coordinates - boxes overlap, arrows cross, and the result needs manual cleanup.
