@@ -26,17 +26,17 @@ Tell the AI *what* to draw. This MCP handles *where* and *how*.
 - **Talk to your diagrams** - Add, remove, or rewire components on an existing diagram with natural language
 - **Hub node visualization** - Gateways and load balancers auto-stretch to span their connected services
 
-## Examples
+## See It In Action
 
-> All diagrams below were generated entirely by AI using this MCP -- zero manual positioning.
+> Every frame below is generated entirely by AI using this MCP -- zero manual positioning.
 
 ### E-Commerce Platform Architecture
 
-![E-Commerce Platform Architecture](showcase/ecommerce_platform.png)
+![E-Commerce Platform Demo](showcase/demo_ecommerce.gif)
 
 ### Payment Processing Flow
 
-![Payment Processing Flow](showcase/payment_flow.png)
+![Payment Processing Flow Demo](showcase/demo_payment.gif)
 
 ## Quick Start
 
