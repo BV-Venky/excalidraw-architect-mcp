@@ -1,5 +1,9 @@
 # Excalidraw Architect MCP
 <!-- mcp-name: io.github.BV-Venky/excalidraw-architect-mcp -->
+[![PyPI](https://img.shields.io/pypi/v/excalidraw-architect-mcp)](https://pypi.org/project/excalidraw-architect-mcp/)
+[![Cursor Directory](https://img.shields.io/badge/Cursor-Directory-purple)](https://cursor.directory/mcp/excalidraw-architect-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
 
 An MCP server that generates beautiful Excalidraw architecture diagrams with perfect auto-layout, stateful editing, and architecture-aware component styling.
 
