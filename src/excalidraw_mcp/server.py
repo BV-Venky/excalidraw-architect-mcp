@@ -7,8 +7,6 @@ Four tools:
   4. get_diagram_info   -- Read current diagram state for LLM reasoning
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from fastmcp import FastMCP
