@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "excalidraw-architect-mcp"
-version = "0.2.2"
+version = "0.2.3"
 description = "An MCP server that generates beautiful Excalidraw architecture diagrams with perfect auto-layout, stateful editing, and architecture-aware component styling."
 readme = "README.md"
 license = "MIT"
