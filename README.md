@@ -43,6 +43,10 @@ Your LLM describes the components and connections, and the MCP handles layout, s
 - **Brainstorming and system design** - when you're whiteboarding a new service or debating trade-offs, ask it to visualize the architecture as you go. Iterate by saying "add a cache here" or "swap Kafka for SQS" instead of redrawing from scratch.
 - **Documentation that stays alive** - drop the `.excalidraw` file into your repo and update it with natural language as the system evolves. No more stale diagrams from six sprints ago.
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/bv-venky-excalidraw-architect-mcp).
+
 ## Quick Start
 
 ### Install
