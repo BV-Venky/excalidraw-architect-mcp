@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import html
 import json
-import math
 from pathlib import Path
 from typing import Any
 
@@ -279,7 +278,6 @@ def excalidraw_to_svg(data: dict[str, Any]) -> str:
     height = max_y - min_y + PADDING * 2
 
     # Two-pass rendering: shapes first, then text on top
-    shape_types = {"rectangle", "ellipse", "diamond"}
     arrow_types = {"arrow", "line"}
 
     shape_svgs: list[str] = []
