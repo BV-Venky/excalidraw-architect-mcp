@@ -101,9 +101,7 @@ def _arrowhead_marker(color: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _render_rect(
-    el: dict[str, Any], ox: float, oy: float
-) -> str:
+def _render_rect(el: dict[str, Any], ox: float, oy: float) -> str:
     x = el["x"] - ox
     y = el["y"] - oy
     w = el.get("width", 80)
@@ -124,9 +122,7 @@ def _render_rect(
     )
 
 
-def _render_ellipse(
-    el: dict[str, Any], ox: float, oy: float
-) -> str:
+def _render_ellipse(el: dict[str, Any], ox: float, oy: float) -> str:
     cx = el["x"] - ox + el.get("width", 80) / 2
     cy = el["y"] - oy + el.get("height", 40) / 2
     rx = el.get("width", 80) / 2
@@ -145,9 +141,7 @@ def _render_ellipse(
     )
 
 
-def _render_diamond(
-    el: dict[str, Any], ox: float, oy: float
-) -> str:
+def _render_diamond(el: dict[str, Any], ox: float, oy: float) -> str:
     x = el["x"] - ox
     y = el["y"] - oy
     w = el.get("width", 80)
@@ -167,9 +161,7 @@ def _render_diamond(
     )
 
 
-def _render_text(
-    el: dict[str, Any], ox: float, oy: float
-) -> str:
+def _render_text(el: dict[str, Any], ox: float, oy: float) -> str:
     text = el.get("text", "")
     if not text:
         return ""
@@ -213,9 +205,7 @@ def _render_text(
     )
 
 
-def _render_arrow(
-    el: dict[str, Any], ox: float, oy: float, used_colors: set[str]
-) -> str:
+def _render_arrow(el: dict[str, Any], ox: float, oy: float, used_colors: set[str]) -> str:
     points_raw = el.get("points", [])
     if len(points_raw) < 2:
         return ""
