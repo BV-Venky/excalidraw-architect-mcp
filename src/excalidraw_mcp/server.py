@@ -1,10 +1,11 @@
 """FastMCP server exposing Excalidraw diagram tools.
 
-Four tools:
-  1. create_diagram     -- Build a new diagram from structured node/connection data
+Five tools:
+  1. create_diagram        -- Build a new diagram from structured node/connection data
   2. mermaid_to_excalidraw -- Convert mermaid flowchart syntax to .excalidraw
-  3. modify_diagram     -- Iteratively edit an existing diagram
-  4. get_diagram_info   -- Read current diagram state for LLM reasoning
+  3. modify_diagram        -- Iteratively edit an existing diagram
+  4. get_diagram_info      -- Read current diagram state for LLM reasoning
+  5. export_diagram        -- Export an .excalidraw file to SVG or PNG
 """
 
 from typing import Any
@@ -28,6 +29,7 @@ from excalidraw_mcp.core.models import (
 )
 from excalidraw_mcp.engine.layout import compute_layout
 from excalidraw_mcp.engine.renderer import build_excalidraw_file, save_excalidraw
+from excalidraw_mcp.export.svg_exporter import export_to_png, export_to_svg
 from excalidraw_mcp.parsers.mermaid import parse_mermaid
 from excalidraw_mcp.parsers.state import apply_modifications, get_diagram_summary
 
@@ -299,6 +301,54 @@ def get_diagram_info(file_path: str) -> str:
         Human-readable summary of all nodes and connections.
     """
     return get_diagram_summary(file_path)
+
+
+# ---------------------------------------------------------------------------
+# Tool 5: export_diagram
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool
+def export_diagram(
+    input_path: str,
+    output_path: str,
+    format: str = "svg",
+    scale: float = 2.0,
+) -> str:
+    """Export an .excalidraw file to SVG or PNG image.
+
+    Converts an existing .excalidraw diagram into a portable image file
+    without requiring a browser or the Excalidraw application.
+
+    Args:
+        input_path: Path to the source .excalidraw file.
+        output_path: Destination file path (e.g., "./arch.svg" or "./arch.png").
+        format: Output format - "svg" (default) or "png".
+                PNG export requires the cairosvg package
+                (``pip install cairosvg``).
+        scale: Resolution multiplier for PNG output (default 2.0 = 2×).
+               Has no effect on SVG output.
+
+    Returns:
+        Path to the exported image file.
+    """
+    fmt = format.lower().strip()
+    if fmt not in ("svg", "png"):
+        return f"Error: unsupported format '{format}'. Choose 'svg' or 'png'."
+
+    try:
+        if fmt == "svg":
+            out = export_to_svg(input_path, output_path)
+            return f"Exported SVG to: {out}"
+        else:
+            out = export_to_png(input_path, output_path, scale=scale)
+            return f"Exported PNG ({scale}× scale) to: {out}"
+    except FileNotFoundError:
+        return f"Error: file not found: {input_path}"
+    except ImportError as exc:
+        return f"Error: {exc}"
+    except Exception as exc:  # noqa: BLE001
+        return f"Error during export: {exc}"
 
 
 # ---------------------------------------------------------------------------
