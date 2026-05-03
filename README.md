@@ -76,6 +76,25 @@ uvx excalidraw-architect-mcp
 }
 ```
 
+**Claude Code** - Run this one-liner:
+
+```bash
+claude mcp add-json excalidraw-architect '{"type":"stdio","command":"excalidraw-architect-mcp"}' --scope user
+```
+
+Or add manually to `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "excalidraw-architect": {
+      "type": "stdio",
+      "command": "excalidraw-architect-mcp"
+    }
+  }
+}
+```
+
 **Windsurf / Other IDEs** - Same pattern; point to the `excalidraw-architect-mcp` command over stdio.
 
 ### Install the Diagram Design Skill (recommended)
