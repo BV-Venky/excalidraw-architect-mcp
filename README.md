@@ -21,6 +21,7 @@ Your LLM describes the components and connections, and the MCP handles layout, s
 - **Architecture-aware styling** - say "Kafka" and get a stream-styled node, not a generic rectangle
 - **Talk to your diagrams** - add, remove, or rewire components on an existing diagram with natural language
 - **Hub node visualization** - gateways and load balancers auto-stretch to span their connected services
+- **Export to SVG & PNG** - convert any `.excalidraw` file to a portable image, no browser needed
 
 ## See It In Action
 
@@ -46,6 +47,12 @@ Your LLM describes the components and connections, and the MCP handles layout, s
 
 ```bash
 pip install excalidraw-architect-mcp
+```
+
+For **PNG export** support (SVG works out of the box):
+
+```bash
+pip install excalidraw-architect-mcp[png]
 ```
 
 Or run without installing (requires [uv](https://docs.astral.sh/uv/)):
@@ -101,6 +108,10 @@ Just ask your AI IDE naturally:
 
 > "Add a Caching layer to the Order Service in the High Level architecture diagram"
 
+> "Export the architecture diagram to SVG"
+
+> "Export the diagram as a PNG at 3x resolution"
+
 The AI calls the MCP tool with the relationship map. The MCP handles layout, styling, and output. Open the resulting `.excalidraw` file with the [Excalidraw VS Code extension](https://marketplace.visualstudio.com/items?itemName=pomdtr.excalidraw-editor) or drag it into [excalidraw.com](https://excalidraw.com).
 
 ## Features
@@ -145,6 +156,15 @@ Already have a Mermaid flowchart? Convert it:
 
 > "Convert this Mermaid diagram to Excalidraw" (paste your Mermaid syntax)
 
+### Image Export
+
+Export any `.excalidraw` diagram to a portable image — no browser, Excalidraw app, or Node.js required.
+
+- **SVG** - zero extra dependencies; uses a pure-Python renderer that handles rectangles, ellipses, diamonds, text (including multiline), and arrows with arrowheads
+- **PNG** - requires the optional `cairosvg` package (`pip install excalidraw-architect-mcp[png]`); supports a configurable resolution multiplier (default 2×)
+
+> "Export the architecture diagram as an SVG"
+
 ## MCP Tools
 
 | Tool | Description |
@@ -153,6 +173,7 @@ Already have a Mermaid flowchart? Convert it:
 | `mermaid_to_excalidraw` | Convert Mermaid flowchart syntax to `.excalidraw` |
 | `modify_diagram` | Add/remove/update nodes and connections on an existing diagram |
 | `get_diagram_info` | Read current diagram state (call before modifying) |
+| `export_diagram` | Export `.excalidraw` to SVG or PNG image |
 
 ## Contributing
 
