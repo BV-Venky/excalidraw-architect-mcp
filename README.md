@@ -4,9 +4,6 @@
 [![Cursor Directory](https://img.shields.io/badge/Cursor-Directory-purple)](https://cursor.directory/mcp/excalidraw-architect-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-<a href="https://glama.ai/mcp/servers/@BV-Venky/excalidraw-architect-mcp">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/@BV-Venky/excalidraw-architect-mcp/badge" alt="excalidraw-architect-mcp MCP server" />
-</a>
 
 It's been a constant struggle trying to understand unfamiliar and complex codebases - managing cognitive overload and trying to imagine how everything fits together.
 
