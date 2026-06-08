@@ -39,7 +39,7 @@ Your LLM describes the components and connections, and the MCP handles layout, s
 
 ## 🧠 Architecture Knowledge Graph
 
-> **New in v0.4.** Your diagrams were always backed by a graph. Now that graph is *yours* — a persistent, version-controlled model of your system that the AI builds once and reuses everywhere.
+> **New in v1.0.** Your diagrams were always backed by a graph. Now that graph is *yours* — a persistent, version-controlled model of your system that the AI builds once and reuses everywhere.
 
 ![Knowledge Graph rendered diagram](showcase/knowledge_graph.svg)
 
