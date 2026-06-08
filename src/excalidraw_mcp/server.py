@@ -1,11 +1,15 @@
 """FastMCP server exposing Excalidraw diagram tools.
 
-Five tools:
+Diagram tools:
   1. create_diagram        -- Build a new diagram from structured node/connection data
   2. mermaid_to_excalidraw -- Convert mermaid flowchart syntax to .excalidraw
   3. modify_diagram        -- Iteratively edit an existing diagram
   4. get_diagram_info      -- Read current diagram state for LLM reasoning
   5. export_diagram        -- Export an .excalidraw file to SVG or PNG
+
+Knowledge-graph tools (kg_*): a persistent, version-controlled architecture
+model (default .claude/architecture.md) that is the single source of truth;
+diagrams are rendered views of it. Registered via knowledge.tools.register.
 """
 
 from typing import Any
@@ -30,6 +34,7 @@ from excalidraw_mcp.core.models import (
 from excalidraw_mcp.engine.layout import compute_layout
 from excalidraw_mcp.engine.renderer import build_excalidraw_file, save_excalidraw
 from excalidraw_mcp.export.svg_exporter import export_to_png, export_to_svg
+from excalidraw_mcp.knowledge.tools import register as register_knowledge_tools
 from excalidraw_mcp.parsers.mermaid import parse_mermaid
 from excalidraw_mcp.parsers.state import apply_modifications, get_diagram_summary
 
@@ -349,6 +354,13 @@ def export_diagram(
         return f"Error: {exc}"
     except Exception as exc:  # noqa: BLE001
         return f"Error during export: {exc}"
+
+
+# ---------------------------------------------------------------------------
+# Knowledge-graph tools (kg_*)
+# ---------------------------------------------------------------------------
+
+register_knowledge_tools(mcp)
 
 
 # ---------------------------------------------------------------------------

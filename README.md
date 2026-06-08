@@ -18,6 +18,7 @@ When you're onboarding onto a codebase, designing a new system, or documenting e
 
 Your LLM describes the components and connections, and the MCP handles layout, styling, and rendering using a proper graph layout algorithm. 50+ technologies (Kafka, PostgreSQL, Redis, etc.) get auto-styled, you can iteratively edit diagrams with natural language ("add a cache in front of the DB"), and it runs fully offline in Cursor/Windsurf - no API keys needed.
 
+- **Living architecture knowledge graph** - persist your system as a version-controlled model your AI can query, lint, and re-render — diagrams become *views*, not the source of truth ([details](#-architecture-knowledge-graph))
 - **Perfect layouts every time** - Sugiyama algorithm with adaptive spacing; no overlapping boxes
 - **Architecture-aware styling** - say "Kafka" and get a stream-styled node, not a generic rectangle
 - **Talk to your diagrams** - add, remove, or rewire components on an existing diagram with natural language
@@ -35,6 +36,58 @@ Your LLM describes the components and connections, and the MCP handles layout, s
 ### Payment Processing Flow
 
 ![Payment Processing Flow Demo](showcase/demo_payment.gif)
+
+## 🧠 Architecture Knowledge Graph
+
+> **New in v1.0.** Your diagrams were always backed by a graph. Now that graph is *yours* — a persistent, version-controlled model of your system that the AI builds once and reuses everywhere.
+
+![Knowledge Graph rendered diagram](showcase/knowledge_graph.svg)
+
+> *The diagram above was rendered from a knowledge graph — a single `.claude/architecture.md` file. Notice `Order Service → Payment Service` appears twice: a solid `REST /charge` call and a dashed `Kafka payment.requested` event. Two communication modes, two arrows.*
+
+### Why a knowledge graph?
+
+A one-off diagram goes stale the moment you close it. A **knowledge graph** is a living model:
+
+- **One source of truth, many views** — store the whole system once, then render the full picture, a single domain, or everything within N hops of one service.
+- **Consistent across diagrams** — the same service keeps the same id, styling, and metadata everywhere.
+- **Queryable** — ask "what breaks if payments goes down?" and get the real blast radius, not a guess.
+- **Self-checking** — lint for dependency cycles, single points of failure, and orphaned services.
+- **Lives in git** — review architecture changes in PRs; the markdown diffs cleanly.
+
+### The file is human- *and* machine-readable
+
+The graph is a single markdown file (default `.claude/architecture.md`):
+
+```markdown
+## Services
+- order-service: Order Service [type: service] [domain: orders] [owner: @orders]
+- payment-service: Payment Service [type: service] [domain: payments] [owner: @payments]
+
+## Dependencies
+- order-service -> payment-service : "REST /charge"
+- order-service -> payment-service : "Kafka payment.requested" [style: dashed]
+```
+
+Edit it by hand or let the AI maintain it — it round-trips losslessly either way.
+
+### Just ask your AI
+
+> "Map this codebase into the architecture knowledge graph"
+
+> "Link the order service to payments over Kafka"
+
+> "What depends on the payment service? Render just its neighborhood"
+
+> "Render the orders domain as a focused diagram"
+
+> "Lint the architecture for cycles and single points of failure"
+
+> "Import my existing diagram.excalidraw into the knowledge graph"
+
+> "Generate an onboarding guide from the architecture"
+
+See the [Knowledge Graph tools](#mcp-tools) for the full tool list.
 
 ## Use Cases
 
@@ -114,6 +167,20 @@ curl -o ~/.cursor/skills/excalidraw-diagram-design/SKILL.md \
 
 The AI will automatically pick up the skill and apply it when generating diagrams. Feel free to modify the rules to suit your preferences - tweak node limits, add your own patterns, or adjust styling guidelines.
 
+### Install the Knowledge Graph Skill (recommended for the graph workflow)
+
+For the [architecture knowledge graph](#-architecture-knowledge-graph), this repo also includes an [Architecture Knowledge Graph Skill](.skills/architecture-knowledge-graph/SKILL.md). It teaches the AI how to read a codebase well — identify service boundaries, map communication signals (HTTP / gRPC / Kafka / DB) to the right labelled links, match producers and consumers across repos, and keep the graph clean (stable ids, every edge labelled, lint before render).
+
+**For Cursor users:**
+
+```bash
+mkdir -p ~/.cursor/skills/architecture-knowledge-graph && \
+curl -o ~/.cursor/skills/architecture-knowledge-graph/SKILL.md \
+  https://raw.githubusercontent.com/BV-Venky/excalidraw-architect-mcp/main/.skills/architecture-knowledge-graph/SKILL.md
+```
+
+**For other IDEs:** Download the [SKILL.md](.skills/architecture-knowledge-graph/SKILL.md) file and add it to your IDE's prompt context or system instructions.
+
 > **A note on diagram complexity:** As the number of components and connections grows, diagrams inevitably become harder to read - this is true for humans drawing by hand too, not just automated layout. For best results, aim for **6-15 nodes** in architecture diagrams and **10-25 nodes** in detailed flows. If your system is larger, split it into multiple focused diagrams rather than cramming everything into one.
 
 ### Use It
@@ -187,6 +254,8 @@ Export any `.excalidraw` diagram to a portable image — no browser, Excalidraw 
 
 ## MCP Tools
 
+### Diagram tools
+
 | Tool | Description |
 |---|---|
 | `create_diagram` | Create a new diagram from structured node/connection data |
@@ -194,6 +263,30 @@ Export any `.excalidraw` diagram to a portable image — no browser, Excalidraw 
 | `modify_diagram` | Add/remove/update nodes and connections on an existing diagram |
 | `get_diagram_info` | Read current diagram state (call before modifying) |
 | `export_diagram` | Export `.excalidraw` to SVG or PNG image |
+
+### Knowledge graph tools (`kg_*`)
+
+The architecture knowledge graph (default `.claude/architecture.md`) is the source of truth; diagrams are rendered views of it.
+
+| Tool | Description |
+|---|---|
+| `kg_init` | Create a new knowledge graph file |
+| `kg_add_service` / `kg_remove_service` | Add/update or remove a service (with type, domain, owner, tags, links) |
+| `kg_link` / `kg_unlink` | Add/remove a dependency (parallel edges supported — e.g. REST *and* Kafka between the same pair) |
+| `kg_set_domain` | Group a service into a domain / bounded context |
+| `kg_info` | Summarize services, domains, and topology |
+| `kg_render` | Render the whole architecture to `.excalidraw` |
+| `kg_render_view` | Render a focused diagram of specific services |
+| `kg_render_around` | Render everything within N hops of a service |
+| `kg_render_domain` | Render a single domain |
+| `kg_import` | Bootstrap the graph from an existing `.excalidraw` diagram |
+| `whats_connected_to` | Impact analysis — upstream/downstream blast radius |
+| `kg_path` | Trace the dependency path between two services |
+| `kg_lint` | Health check: cycles, single points of failure, orphans, dangling refs |
+| `kg_export` | Export the graph to Mermaid, Graphviz DOT, or JSON |
+| `kg_diff` | Show how the architecture changed since a git ref |
+| `kg_onboarding_doc` | Generate a human onboarding guide from the graph |
+| `kg_drift` | Detect drift between the declared graph and Python imports |
 
 ## Contributing
 

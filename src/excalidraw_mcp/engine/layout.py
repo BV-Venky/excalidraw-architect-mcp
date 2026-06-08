@@ -74,6 +74,9 @@ _ARC_SIBLING_RATIO = 0.5
 # Arrows stay this far from node corners to avoid visual clipping.
 EDGE_MARGIN = 8.0
 
+# Perpendicular separation between parallel edges (same from/to pair).
+PARALLEL_SPREAD = 26.0
+
 # Edge label measurement
 LABEL_CHAR_WIDTH = 8.0
 LABEL_PADDING = 50.0
@@ -972,6 +975,32 @@ def _find_segment_obstacles(
     return extra
 
 
+def _bow_parallel(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    rank: int,
+    count: int,
+) -> list[tuple[float, float]]:
+    """Bow a parallel edge sideways so it reads as a distinct arrow.
+
+    ``rank`` is this edge's index among the ``count`` edges sharing the same
+    endpoints. Offsets are symmetric around the straight line; the centre edge
+    of an odd group stays straight.
+    """
+    k = rank - (count - 1) / 2.0
+    if abs(k) < 1e-9:
+        return [start, end]
+    mx = (start[0] + end[0]) / 2.0
+    my = (start[1] + end[1]) / 2.0
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    length = (dx * dx + dy * dy) ** 0.5 or 1.0
+    # unit perpendicular
+    px, py = -dy / length, dx / length
+    offset = k * 2.0 * PARALLEL_SPREAD
+    return [start, (mx + px * offset, my + py * offset), end]
+
+
 def _route_edges(
     edges: list[Edge],
     positioned_nodes: list[PositionedNode],
@@ -992,8 +1021,20 @@ def _route_edges(
 
     detour_counts: dict[tuple[str, str], int] = {}
 
+    # Group parallel edges (same from/to pair) so they can be bowed apart into
+    # distinct arrows instead of overlapping — e.g. a REST call and a Kafka
+    # topic between the same two services.
+    parallel_ranks: dict[int, tuple[int, int]] = {}
+    _pair_members: dict[tuple[str, str], list[int]] = {}
+    for idx, e in enumerate(edges):
+        _pair_members.setdefault((e.from_id, e.to_id), []).append(idx)
+    for members in _pair_members.values():
+        if len(members) > 1:
+            for rank, idx in enumerate(members):
+                parallel_ranks[idx] = (rank, len(members))
+
     result: list[PositionedEdge] = []
-    for edge in edges:
+    for i, edge in enumerate(edges):
         src = node_rects.get(edge.from_id)
         dst = node_rects.get(edge.to_id)
         if src and dst:
@@ -1007,6 +1048,12 @@ def _route_edges(
                 src_slot=src_slot,
                 dst_slot=dst_slot,
             )
+            if i in parallel_ranks:
+                rank, count = parallel_ranks[i]
+                result.append(
+                    PositionedEdge(edge=edge, points=_bow_parallel(start, end, rank, count))
+                )
+                continue
             layer_dist = abs(end[layer_axis] - start[layer_axis])
             if layer_dist < short_threshold:
                 points = [start, end]
@@ -1092,6 +1139,13 @@ def _uncross_arrivals(
                     b_end = b.points[-1][sibling]
                     a_approach = a.points[-2][sibling]
                     b_approach = b.points[-2][sibling]
+
+                    # Skip when endpoints or approaches coincide: there is no
+                    # ordering to correct, and swapping equal values is a no-op
+                    # that would loop forever (e.g. parallel edges that share
+                    # the same endpoint and bow apart).
+                    if a_end == b_end or a_approach == b_approach:
+                        continue
 
                     end_order = a_end < b_end
                     approach_order = a_approach < b_approach

@@ -110,6 +110,27 @@ class TestExcalidrawToSvg:
         svg = excalidraw_to_svg(_minimal_doc(elements=[_text(text="line1\nline2")]))
         assert svg.count("<tspan") == 2
 
+    def test_edge_label_gets_masking_background(self):
+        """A text bound to an arrow gets a canvas-colored backing rect so the
+        line doesn't run through the label."""
+        arrow = _arrow()
+        label = {**_text(text="REST"), "id": "lbl", "containerId": arrow["id"]}
+        doc = _minimal_doc(
+            elements=[arrow, label],
+            appState={"viewBackgroundColor": "#fafafa"},
+        )
+        svg = excalidraw_to_svg(doc)
+        # backing rect in the canvas color appears for the edge label
+        assert 'rx="3" fill="#fafafa"' in svg
+
+    def test_plain_text_has_no_masking_background(self):
+        """A standalone text (or a label bound to a shape) is not masked."""
+        # bound to a rectangle, not an arrow -> no mask
+        label = {**_text(text="Node"), "id": "lbl", "containerId": "r1"}
+        doc = _minimal_doc(elements=[_rect(), label])
+        svg = excalidraw_to_svg(doc)
+        assert 'rx="3" fill="#ffffff"' not in svg
+
     def test_arrow_with_arrowhead(self):
         svg = excalidraw_to_svg(_minimal_doc(elements=[_arrow()]))
         assert "<path" in svg

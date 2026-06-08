@@ -161,7 +161,7 @@ def _render_diamond(el: dict[str, Any], ox: float, oy: float) -> str:
     )
 
 
-def _render_text(el: dict[str, Any], ox: float, oy: float) -> str:
+def _render_text(el: dict[str, Any], ox: float, oy: float, mask_bg: str | None = None) -> str:
     text = el.get("text", "")
     if not text:
         return ""
@@ -189,6 +189,19 @@ def _render_text(el: dict[str, Any], ox: float, oy: float) -> str:
         tx = x
 
     lines = text.split("\n")
+
+    # Mask the line behind an edge label so the arrow doesn't run through the
+    # text (mirrors how Excalidraw renders bound arrow labels).
+    bg = ""
+    if mask_bg:
+        h = el.get("height", line_h_px * len(lines))
+        pad_x, pad_y = 4.0, 2.0
+        bg = (
+            f'<rect x="{x - pad_x:.2f}" y="{y - pad_y:.2f}" '
+            f'width="{w + 2 * pad_x:.2f}" height="{h + 2 * pad_y:.2f}" '
+            f'rx="3" fill="{_esc(mask_bg)}" opacity="{op:.2f}"/>'
+        )
+
     parts: list[str] = []
     for i, line in enumerate(lines):
         dy = font_size + i * line_h_px if i == 0 else line_h_px
@@ -198,6 +211,7 @@ def _render_text(el: dict[str, Any], ox: float, oy: float) -> str:
 
     tspans = "".join(parts)
     return (
+        f"{bg}"
         f'<text x="{tx:.2f}" y="{y:.2f}" font-size="{font_size}" '
         f'font-family="{font_family}" fill="{_esc(color)}" '
         f'text-anchor="{anchor}" opacity="{op:.2f}">'
@@ -269,6 +283,7 @@ def excalidraw_to_svg(data: dict[str, Any]) -> str:
 
     # Two-pass rendering: shapes first, then text on top
     arrow_types = {"arrow", "line"}
+    id_to_type = {e.get("id"): e.get("type", "") for e in elements}
 
     shape_svgs: list[str] = []
     arrow_svgs: list[str] = []
@@ -286,7 +301,10 @@ def excalidraw_to_svg(data: dict[str, Any]) -> str:
         elif el_type in arrow_types:
             arrow_svgs.append(_render_arrow(el, ox, oy, used_colors))
         elif el_type == "text":
-            text_svgs.append(_render_text(el, ox, oy))
+            # Labels bound to an arrow get a canvas-colored backing so the
+            # line doesn't visually cut through the text.
+            is_edge_label = id_to_type.get(el.get("containerId")) in arrow_types
+            text_svgs.append(_render_text(el, ox, oy, mask_bg=bg_color if is_edge_label else None))
 
     markers = "\n    ".join(_arrowhead_marker(c) for c in sorted(used_colors))
     defs = f"<defs>\n    {markers}\n  </defs>" if markers else ""

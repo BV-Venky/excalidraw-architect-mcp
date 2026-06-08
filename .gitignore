@@ -23,3 +23,6 @@ htmlcov/
 Thumbs.db
 uv.lock
 *.excalidraw
+
+.idea/
+demo/tmp/
