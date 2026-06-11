@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/bv-venky-excalidraw-architect-mcp-badge.png)](https://mseep.ai/app/bv-venky-excalidraw-architect-mcp)
+
 # Excalidraw Architect MCP
 <!-- mcp-name: io.github.BV-Venky/excalidraw-architect-mcp -->
 [![PyPI](https://img.shields.io/pypi/v/excalidraw-architect-mcp)](https://pypi.org/project/excalidraw-architect-mcp/)
