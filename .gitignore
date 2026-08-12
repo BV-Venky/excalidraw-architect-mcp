@@ -26,3 +26,7 @@ uv.lock
 
 .idea/
 demo/tmp/
+tmp/
+
+# Ship the showcase sources so the gallery images are provably real diagrams
+!showcase/gallery/*.excalidraw
