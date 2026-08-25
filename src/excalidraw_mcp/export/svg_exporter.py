@@ -1,18 +1,43 @@
 """Export .excalidraw files to SVG and PNG.
 
 Renders all non-deleted elements (rectangles, ellipses, diamonds, text,
-arrows) into a standalone SVG using only the Python standard library.
+arrows, and lines -- both open polylines and filled closed polygons) into a
+standalone SVG using only the Python standard library. Rotated text is
+supported so vertical axis titles survive the round trip.
 PNG export requires the optional ``cairosvg`` package.
 """
 
 from __future__ import annotations
 
+import base64
 import html
 import json
+import math
 from pathlib import Path
 from typing import Any
 
+from excalidraw_mcp.export import sketch
+
 PADDING = 40  # px around the diagram content
+
+# Excalidraw's fontFamily 1 is Excalifont (Virgil before that) -- a bundled
+# webfont, so a standalone SVG has nothing to resolve it to. Mapping it to the
+# generic CSS `cursive` is worse than useless: on macOS that resolves to Apple
+# Chancery, a formal calligraphic face that reads nothing like handwriting.
+#
+# So: name the real fonts first (exact if the viewer has Excalidraw's font
+# installed), then fall back through genuine handwriting faces that ship with
+# macOS and Windows, and only reach `cursive` as a last resort. Pass
+# ``embed_font`` to ``export_to_svg`` to inline a font file and make the output
+# fully self-contained and identical everywhere.
+_FONT_STACKS: dict[int, str] = {
+    1: (
+        "Excalifont, Virgil, 'Segoe Print', 'Bradley Hand', "
+        "'Chalkboard SE', Chalkboard, 'Comic Sans MS', cursive"
+    ),
+    2: "Helvetica, Arial, sans-serif",
+    3: "'Cascadia Code', Consolas, 'Courier New', monospace",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -32,7 +57,7 @@ def _bounds(elements: list[dict[str, Any]]) -> tuple[float, float, float, float]
         x, y = el.get("x", 0.0), el.get("y", 0.0)
         w, h = el.get("width", 0.0), el.get("height", 0.0)
 
-        if el_type == "arrow":
+        if el_type in ("arrow", "line"):
             ox, oy = x, y
             for p in el.get("points", [[0, 0]]):
                 px, py = ox + p[0], oy + p[1]
@@ -78,87 +103,113 @@ def _esc(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Arrow marker registry
-# ---------------------------------------------------------------------------
-
-
-def _marker_id(color: str) -> str:
-    return "arr-" + color.lstrip("#")
-
-
-def _arrowhead_marker(color: str) -> str:
-    mid = _marker_id(color)
-    return (
-        f'<marker id="{mid}" markerWidth="10" markerHeight="7" '
-        f'refX="9" refY="3.5" orient="auto">'
-        f'<polygon points="0 0, 10 3.5, 0 7" fill="{_esc(color)}"/>'
-        f"</marker>"
-    )
-
-
-# ---------------------------------------------------------------------------
 # Element renderers
 # ---------------------------------------------------------------------------
 
 
-def _render_rect(el: dict[str, Any], ox: float, oy: float) -> str:
-    x = el["x"] - ox
-    y = el["y"] - oy
-    w = el.get("width", 80)
-    h = el.get("height", 40)
+def _rough_for(el: dict[str, Any]) -> tuple[sketch.Rough, sketch.Rng]:
+    """Build roughjs options for an element, mirroring Excalidraw's own mapping.
+
+    The important detail is ``disable_multi_stroke`` for non-solid strokes:
+    Excalidraw draws dashed and dotted outlines as a single pass, because two
+    jittered dashed passes read as a smudge.
+    """
+    stroke_style = el.get("strokeStyle", "solid")
+    return (
+        sketch.Rough(
+            roughness=float(el.get("roughness", 1)),
+            disable_multi_stroke=stroke_style != "solid",
+        ),
+        sketch.Rng(el.get("seed", 1) or 1),
+    )
+
+
+def _stroke_attrs(el: dict[str, Any]) -> str:
     sc = el.get("strokeColor", "#1e1e1e")
-    bg = _fill(el.get("backgroundColor", "transparent"))
     sw = el.get("strokeWidth", 2)
     ss = el.get("strokeStyle", "solid")
-    op = _opacity(el.get("opacity", 100))
-    roundness = el.get("roundness")
-    rx = 8 if roundness else 0
+    # Excalidraw thickens non-solid strokes slightly to keep dashes legible.
+    if ss != "solid":
+        sw = sw + 0.5
     dash = _stroke_dasharray(ss, sw)
-    dash_attr = f" {dash}" if dash else ""
     return (
-        f'<rect x="{x:.2f}" y="{y:.2f}" width="{w:.2f}" height="{h:.2f}" '
-        f'rx="{rx}" fill="{_esc(bg)}" stroke="{_esc(sc)}" stroke-width="{sw}" '
-        f'opacity="{op:.2f}"{dash_attr}/>'
+        f'stroke="{_esc(sc)}" stroke-width="{sw}" fill="none" '
+        f'stroke-linecap="round" stroke-linejoin="round"' + (f" {dash}" if dash else "")
     )
+
+
+def _sketch_shape(
+    el: dict[str, Any],
+    outline: list[tuple[float, float]],
+    *,
+    closed: bool = True,
+    smooth: bool = False,
+) -> str:
+    """Render one shape as an optional solid fill plus a jittered outline.
+
+    Fill is generated before the stroke, matching roughjs's call order so the
+    two consume the random stream in the same sequence.
+    """
+    o, rng = _rough_for(el)
+    op = _opacity(el.get("opacity", 100))
+    bg = _fill(el.get("backgroundColor", "transparent"))
+
+    parts: list[str] = []
+    if bg != "none" and closed:
+        fill_d = sketch.solid_fill(outline, o, rng)
+        if fill_d:
+            parts.append(f'<path d="{fill_d}" fill="{_esc(bg)}" stroke="none" opacity="{op:.2f}"/>')
+
+    if smooth:
+        stroke_d = sketch.curved_path(outline, o, rng, closed=closed)
+    else:
+        stroke_d = sketch.linear_path(outline, closed, o, rng)
+
+    if stroke_d:
+        parts.append(f'<path d="{stroke_d}" {_stroke_attrs(el)} opacity="{op:.2f}"/>')
+    return "".join(parts)
+
+
+def _render_rect(el: dict[str, Any], ox: float, oy: float) -> str:
+    x, y = el["x"] - ox, el["y"] - oy
+    w, h = el.get("width", 80), el.get("height", 40)
+
+    if el.get("roundness"):
+        radius = sketch.excalidraw_corner_radius(w, h)
+        outline = sketch.rounded_rect_points(x, y, w, h, radius)
+        return _sketch_shape(el, outline, smooth=True)
+
+    outline = [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
+    return _sketch_shape(el, outline)
 
 
 def _render_ellipse(el: dict[str, Any], ox: float, oy: float) -> str:
-    cx = el["x"] - ox + el.get("width", 80) / 2
-    cy = el["y"] - oy + el.get("height", 40) / 2
-    rx = el.get("width", 80) / 2
-    ry = el.get("height", 40) / 2
-    sc = el.get("strokeColor", "#1e1e1e")
-    bg = _fill(el.get("backgroundColor", "transparent"))
-    sw = el.get("strokeWidth", 2)
-    ss = el.get("strokeStyle", "solid")
+    w, h = el.get("width", 80), el.get("height", 40)
+    cx = el["x"] - ox + w / 2
+    cy = el["y"] - oy + h / 2
+
+    o, rng = _rough_for(el)
     op = _opacity(el.get("opacity", 100))
-    dash = _stroke_dasharray(ss, sw)
-    dash_attr = f" {dash}" if dash else ""
-    return (
-        f'<ellipse cx="{cx:.2f}" cy="{cy:.2f}" rx="{rx:.2f}" ry="{ry:.2f}" '
-        f'fill="{_esc(bg)}" stroke="{_esc(sc)}" stroke-width="{sw}" '
-        f'opacity="{op:.2f}"{dash_attr}/>'
-    )
+    bg = _fill(el.get("backgroundColor", "transparent"))
+
+    stroke_d, core = sketch.ellipse(cx, cy, w, h, o, rng)
+
+    parts: list[str] = []
+    if bg != "none" and core:
+        fill_d = sketch.solid_fill(core, o, rng)
+        if fill_d:
+            parts.append(f'<path d="{fill_d}" fill="{_esc(bg)}" stroke="none" opacity="{op:.2f}"/>')
+    if stroke_d:
+        parts.append(f'<path d="{stroke_d}" {_stroke_attrs(el)} opacity="{op:.2f}"/>')
+    return "".join(parts)
 
 
 def _render_diamond(el: dict[str, Any], ox: float, oy: float) -> str:
-    x = el["x"] - ox
-    y = el["y"] - oy
-    w = el.get("width", 80)
-    h = el.get("height", 40)
+    x, y = el["x"] - ox, el["y"] - oy
+    w, h = el.get("width", 80), el.get("height", 40)
     cx, cy = x + w / 2, y + h / 2
-    pts = f"{cx:.2f},{y:.2f} {x + w:.2f},{cy:.2f} {cx:.2f},{y + h:.2f} {x:.2f},{cy:.2f}"
-    sc = el.get("strokeColor", "#1e1e1e")
-    bg = _fill(el.get("backgroundColor", "transparent"))
-    sw = el.get("strokeWidth", 2)
-    ss = el.get("strokeStyle", "solid")
-    op = _opacity(el.get("opacity", 100))
-    dash = _stroke_dasharray(ss, sw)
-    dash_attr = f" {dash}" if dash else ""
-    return (
-        f'<polygon points="{pts}" fill="{_esc(bg)}" stroke="{_esc(sc)}" '
-        f'stroke-width="{sw}" opacity="{op:.2f}"{dash_attr}/>'
-    )
+    outline = [(cx, y), (x + w, cy), (cx, y + h), (x, cy)]
+    return _sketch_shape(el, outline)
 
 
 def _render_text(el: dict[str, Any], ox: float, oy: float, mask_bg: str | None = None) -> str:
@@ -168,9 +219,7 @@ def _render_text(el: dict[str, Any], ox: float, oy: float, mask_bg: str | None =
     x = el["x"] - ox
     y = el["y"] - oy
     font_size = el.get("fontSize", 16)
-    font_family_id = el.get("fontFamily", 1)
-    family_map = {1: "cursive", 2: "sans-serif", 3: "monospace"}
-    font_family = family_map.get(font_family_id, "sans-serif")
+    font_family = _FONT_STACKS.get(el.get("fontFamily", 1), _FONT_STACKS[2])
     color = el.get("strokeColor", "#1e1e1e")
     op = _opacity(el.get("opacity", 100))
     align = el.get("textAlign", "left")
@@ -210,52 +259,115 @@ def _render_text(el: dict[str, Any], ox: float, oy: float, mask_bg: str | None =
         )
 
     tspans = "".join(parts)
+
+    # Rotated labels (vertical axis titles) rotate about the element centre,
+    # matching how Excalidraw applies `angle`.
+    transform = ""
+    angle = el.get("angle", 0) or 0
+    if angle:
+        h = el.get("height", line_h_px * len(lines))
+        cx = x + w / 2
+        cy = y + h / 2
+        transform = f' transform="rotate({angle * 180 / 3.141592653589793:.2f} {cx:.2f} {cy:.2f})"'
+
     return (
         f"{bg}"
         f'<text x="{tx:.2f}" y="{y:.2f}" font-size="{font_size}" '
         f'font-family="{font_family}" fill="{_esc(color)}" '
-        f'text-anchor="{anchor}" opacity="{op:.2f}">'
+        f'text-anchor="{anchor}" opacity="{op:.2f}"{transform}>'
         f"{tspans}</text>"
     )
 
 
-def _render_arrow(el: dict[str, Any], ox: float, oy: float, used_colors: set[str]) -> str:
+def _render_line(el: dict[str, Any], ox: float, oy: float) -> str:
+    """Render a line element: open polyline, or filled polygon when closed.
+
+    Closed lines are how the typed diagrams draw shapes Excalidraw has no
+    primitive for -- pyramid trapezoids and funnel tiers.
+    """
     points_raw = el.get("points", [])
     if len(points_raw) < 2:
         return ""
 
     base_x = el.get("x", 0.0) - ox
     base_y = el.get("y", 0.0) - oy
-    sc = el.get("strokeColor", "#1e1e1e")
-    sw = el.get("strokeWidth", 2)
-    ss = el.get("strokeStyle", "solid")
-    op = _opacity(el.get("opacity", 100))
-    end_head = el.get("endArrowhead")
-    start_head = el.get("startArrowhead")
-
-    # Absolute coordinates
     abs_pts = [(base_x + p[0], base_y + p[1]) for p in points_raw]
 
-    # Build SVG path
-    path_d = "M " + " L ".join(f"{px:.2f},{py:.2f}" for px, py in abs_pts)
+    closed = bool(el.get("polygon")) or (len(abs_pts) > 2 and abs_pts[0] == abs_pts[-1])
+    if closed and len(abs_pts) > 2 and abs_pts[0] == abs_pts[-1]:
+        abs_pts = abs_pts[:-1]  # sketch closes the loop itself
 
-    dash = _stroke_dasharray(ss, sw)
-    dash_attr = f" {dash}" if dash else ""
+    smooth = bool(el.get("roundness")) and len(abs_pts) > 2
+    return _sketch_shape(el, abs_pts, closed=closed, smooth=smooth)
 
-    # Arrow markers
-    marker_end = ""
-    marker_start = ""
-    if end_head == "arrow":
-        used_colors.add(sc)
-        marker_end = f' marker-end="url(#{_marker_id(sc)})"'
-    if start_head == "arrow":
-        used_colors.add(sc)
-        marker_start = f' marker-start="url(#{_marker_id(sc)})"'
 
-    return (
-        f'<path d="{path_d}" fill="none" stroke="{_esc(sc)}" stroke-width="{sw}" '
-        f'opacity="{op:.2f}"{dash_attr}{marker_end}{marker_start}/>'
-    )
+def _arrowhead_path(
+    tip: tuple[float, float],
+    prev: tuple[float, float],
+    el: dict[str, Any],
+) -> str:
+    """The two short strokes Excalidraw uses for an arrowhead.
+
+    Excalidraw draws a V, not a filled triangle -- 30px legs at 20 degrees off
+    the incoming segment, shortened on short arrows. A filled marker triangle
+    is the single most obvious tell that a diagram was not rendered by
+    Excalidraw.
+    """
+    dx, dy = tip[0] - prev[0], tip[1] - prev[1]
+    distance = math.hypot(dx, dy)
+    if distance < 1e-6:
+        return ""
+
+    nx, ny = dx / distance, dy / distance
+    leg = min(30.0, distance / 2)
+    bx, by = tip[0] - nx * leg, tip[1] - ny * leg
+
+    o, rng = _rough_for(el)
+    # Arrowheads are always single-stroke, however the shaft is drawn.
+    o.disable_multi_stroke = True
+
+    parts = []
+    for degrees in (-20.0, 20.0):
+        angle = math.radians(degrees)
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        rx = tip[0] + (bx - tip[0]) * cos_a - (by - tip[1]) * sin_a
+        ry = tip[1] + (bx - tip[0]) * sin_a + (by - tip[1]) * cos_a
+        d = sketch.linear_path([tip, (rx, ry)], False, o, rng)
+        if d:
+            parts.append(d)
+    return " ".join(parts)
+
+
+def _render_arrow(el: dict[str, Any], ox: float, oy: float) -> str:
+    points_raw = el.get("points", [])
+    if len(points_raw) < 2:
+        return ""
+
+    base_x = el.get("x", 0.0) - ox
+    base_y = el.get("y", 0.0) - oy
+    abs_pts = [(base_x + p[0], base_y + p[1]) for p in points_raw]
+    op = _opacity(el.get("opacity", 100))
+
+    o, rng = _rough_for(el)
+    if el.get("roundness") and len(abs_pts) > 2:
+        shaft = sketch.curved_path(abs_pts, o, rng)
+    else:
+        shaft = sketch.linear_path(abs_pts, False, o, rng)
+
+    heads: list[str] = []
+    if el.get("endArrowhead") == "arrow":
+        heads.append(_arrowhead_path(abs_pts[-1], abs_pts[-2], el))
+    if el.get("startArrowhead") == "arrow":
+        heads.append(_arrowhead_path(abs_pts[0], abs_pts[1], el))
+
+    attrs = _stroke_attrs(el)
+    parts = [f'<path d="{shaft}" {attrs} opacity="{op:.2f}"/>'] if shaft else []
+
+    # Heads never inherit the shaft's dash pattern -- a dashed arrowhead reads
+    # as a broken one.
+    head_attrs = _stroke_attrs({**el, "strokeStyle": "solid"})
+    parts += [f'<path d="{d}" {head_attrs} opacity="{op:.2f}"/>' for d in heads if d]
+    return "".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -263,8 +375,44 @@ def _render_arrow(el: dict[str, Any], ox: float, oy: float, used_colors: set[str
 # ---------------------------------------------------------------------------
 
 
-def excalidraw_to_svg(data: dict[str, Any]) -> str:
-    """Convert an in-memory .excalidraw document to an SVG string."""
+_FONT_MIME = {
+    ".woff2": "font/woff2",
+    ".woff": "font/woff",
+    ".ttf": "font/ttf",
+    ".otf": "font/otf",
+}
+
+
+def _font_face_block(embed_font: str | Path | None) -> str:
+    """Inline a handwriting font so the SVG renders identically everywhere.
+
+    Without this the SVG depends on whatever the viewer has installed. We do
+    not ship a font -- Excalidraw's Excalifont is theirs to distribute -- but
+    pointing at a local copy makes the export fully self-contained.
+    """
+    if not embed_font:
+        return ""
+    path = Path(embed_font)
+    if not path.is_file():
+        return ""
+
+    mime = _FONT_MIME.get(path.suffix.lower(), "font/ttf")
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return (
+        "<defs><style>@font-face{font-family:'Excalifont';"
+        f"src:url(data:{mime};base64,{encoded});"
+        "font-weight:normal;font-style:normal;}</style></defs>"
+    )
+
+
+def excalidraw_to_svg(data: dict[str, Any], embed_font: str | Path | None = None) -> str:
+    """Convert an in-memory .excalidraw document to an SVG string.
+
+    Args:
+        data: A parsed .excalidraw document.
+        embed_font: Optional path to a handwriting font (.woff2/.ttf/...) to
+            inline as ``Excalifont``, making the output self-contained.
+    """
     elements = [e for e in data.get("elements", []) if not e.get("isDeleted")]
     bg_color = data.get("appState", {}).get("viewBackgroundColor", "#ffffff")
 
@@ -288,7 +436,6 @@ def excalidraw_to_svg(data: dict[str, Any]) -> str:
     shape_svgs: list[str] = []
     arrow_svgs: list[str] = []
     text_svgs: list[str] = []
-    used_colors: set[str] = set()
 
     for el in elements:
         el_type = el.get("type", "")
@@ -298,16 +445,19 @@ def excalidraw_to_svg(data: dict[str, Any]) -> str:
             shape_svgs.append(_render_ellipse(el, ox, oy))
         elif el_type == "diamond":
             shape_svgs.append(_render_diamond(el, ox, oy))
-        elif el_type in arrow_types:
-            arrow_svgs.append(_render_arrow(el, ox, oy, used_colors))
+        elif el_type == "line":
+            # Lines share the shape bucket so document order is preserved --
+            # gridlines emitted before bars stay behind them.
+            shape_svgs.append(_render_line(el, ox, oy))
+        elif el_type == "arrow":
+            arrow_svgs.append(_render_arrow(el, ox, oy))
         elif el_type == "text":
             # Labels bound to an arrow get a canvas-colored backing so the
             # line doesn't visually cut through the text.
             is_edge_label = id_to_type.get(el.get("containerId")) in arrow_types
             text_svgs.append(_render_text(el, ox, oy, mask_bg=bg_color if is_edge_label else None))
 
-    markers = "\n    ".join(_arrowhead_marker(c) for c in sorted(used_colors))
-    defs = f"<defs>\n    {markers}\n  </defs>" if markers else ""
+    defs = _font_face_block(embed_font)
 
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" '
@@ -324,10 +474,14 @@ def excalidraw_to_svg(data: dict[str, Any]) -> str:
     return "\n".join(p for p in parts if p)
 
 
-def export_to_svg(input_path: str | Path, output_path: str | Path) -> Path:
+def export_to_svg(
+    input_path: str | Path,
+    output_path: str | Path,
+    embed_font: str | Path | None = None,
+) -> Path:
     """Read an .excalidraw file and write a .svg file."""
     data = json.loads(Path(input_path).read_text(encoding="utf-8"))
-    svg = excalidraw_to_svg(data)
+    svg = excalidraw_to_svg(data, embed_font=embed_font)
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(svg, encoding="utf-8")

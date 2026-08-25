@@ -94,12 +94,17 @@ class TestExcalidrawToSvg:
     def test_ellipse_rendered(self):
         el = {**_rect(), "type": "ellipse", "id": "e1"}
         svg = excalidraw_to_svg(_minimal_doc(elements=[el]))
-        assert "<ellipse" in svg
+        # Sketchy shapes are <path> curves, never a geometrically exact
+        # <ellipse> -- that primitive cannot be hand-drawn.
+        assert "<ellipse" not in svg
+        assert "<path" in svg
+        assert " C " in svg
 
     def test_diamond_rendered(self):
         el = {**_rect(), "type": "diamond", "id": "d1"}
         svg = excalidraw_to_svg(_minimal_doc(elements=[el]))
-        assert "<polygon" in svg
+        assert "<polygon" not in svg
+        assert "<path" in svg
 
     def test_text_rendered(self):
         svg = excalidraw_to_svg(_minimal_doc(elements=[_text(text="PostgreSQL")]))
@@ -134,8 +139,12 @@ class TestExcalidrawToSvg:
     def test_arrow_with_arrowhead(self):
         svg = excalidraw_to_svg(_minimal_doc(elements=[_arrow()]))
         assert "<path" in svg
-        assert "<marker" in svg
-        assert "arr-555555" in svg
+        # Excalidraw draws a two-stroke V, not a filled marker triangle. A
+        # marker is the most obvious tell that something else rendered it.
+        assert "<marker" not in svg
+        assert "#555555" in svg
+        # Shaft plus two head legs, all as paths.
+        assert svg.count("<path") >= 2
 
     def test_dashed_stroke(self):
         el = _rect(strokeStyle="dashed")
@@ -204,3 +213,124 @@ class TestExportToSvgFile:
         out = export_to_png(src, tmp_path / "test.png")
         assert out.exists()
         assert out.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+class TestSketchRenderer:
+    """The roughjs port: seeded jitter, doubled strokes, crisp chrome."""
+
+    def test_same_seed_gives_identical_output(self):
+        a = excalidraw_to_svg(_minimal_doc(elements=[_rect(seed=12345)]))
+        b = excalidraw_to_svg(_minimal_doc(elements=[_rect(seed=12345)]))
+        assert a == b, "export must be reproducible for a given seed"
+
+    def test_different_seed_gives_different_strokes(self):
+        a = excalidraw_to_svg(_minimal_doc(elements=[_rect(seed=1)]))
+        b = excalidraw_to_svg(_minimal_doc(elements=[_rect(seed=999)]))
+        assert a != b, "seed must drive the jitter"
+
+    def test_roughness_zero_is_crisp(self):
+        """Chrome must not wobble: a 1px jittered hairline reads as noise."""
+        from excalidraw_mcp.export import sketch
+
+        o = sketch.Rough(roughness=0)
+        rng = sketch.Rng(42)
+        d = sketch.linear_path([(0, 0), (100, 0)], False, o, rng)
+        # With zero roughness every offset collapses to 0, so both passes land
+        # exactly on the requested geometry.
+        assert "0.00 0.00" in d
+        assert "100.00 0.00" in d
+
+    def test_roughness_one_perturbs_geometry(self):
+        from excalidraw_mcp.export import sketch
+
+        o = sketch.Rough(roughness=1)
+        rng = sketch.Rng(42)
+        d = sketch.linear_path([(0, 0), (100, 0)], False, o, rng)
+        assert d.count("M ") == 2, "a solid stroke is drawn twice"
+        assert "0.00 0.00 C" not in d, "the start point should be nudged"
+
+    def test_non_solid_stroke_is_single_pass(self):
+        """Two jittered dashed passes read as a smudge, so Excalidraw uses one."""
+        from excalidraw_mcp.export import sketch
+
+        rng = sketch.Rng(7)
+        solid = sketch.linear_path(
+            [(0, 0), (100, 0)], False, sketch.Rough(disable_multi_stroke=False), rng
+        )
+        rng = sketch.Rng(7)
+        dashed = sketch.linear_path(
+            [(0, 0), (100, 0)], False, sketch.Rough(disable_multi_stroke=True), rng
+        )
+        assert solid.count("M ") == 2
+        assert dashed.count("M ") == 1
+
+    def test_dashed_element_thickens_and_keeps_dasharray(self):
+        svg = excalidraw_to_svg(_minimal_doc(elements=[_rect(strokeStyle="dashed")]))
+        assert "stroke-dasharray" in svg
+        assert 'stroke-width="2.5"' in svg, "non-solid strokes gain 0.5"
+
+    def test_fill_and_stroke_are_separate_paths(self):
+        """The fill sits slightly inside the outline -- crayon, not vector."""
+        svg = excalidraw_to_svg(_minimal_doc(elements=[_rect(backgroundColor="#eaf0ff")]))
+        assert 'fill="#eaf0ff"' in svg
+        assert 'stroke="none"' in svg
+        assert svg.count("<path") >= 2
+
+    def test_transparent_background_emits_no_fill_path(self):
+        svg = excalidraw_to_svg(_minimal_doc(elements=[_rect(backgroundColor="transparent")]))
+        assert 'stroke="none"' not in svg
+
+    def test_prng_matches_javascript_semantics(self):
+        """Park-Miller via Math.imul; drift here changes every export."""
+        from excalidraw_mcp.export import sketch
+
+        rng = sketch.Rng(1)
+        values = [rng.next() for _ in range(3)]
+        assert all(0.0 <= v < 1.0 for v in values)
+        assert len(set(values)) == 3
+        # Reproducible from the same seed.
+        assert [sketch.Rng(1).next()] == [values[0]]
+
+    def test_handwriting_font_stack_not_generic_cursive(self):
+        """Generic `cursive` resolves to Apple Chancery on macOS -- calligraphy,
+        not handwriting. Real faces must be named first."""
+        svg = excalidraw_to_svg(_minimal_doc(elements=[_text(text="Orders")]))
+        assert "Excalifont" in svg
+        assert "Bradley Hand" in svg
+        assert 'font-family="cursive"' not in svg
+
+    def test_embedded_font_is_inlined(self, tmp_path):
+        font = tmp_path / "fake.woff2"
+        font.write_bytes(b"not-a-real-font")
+        svg = excalidraw_to_svg(_minimal_doc(elements=[_text(text="Orders")]), embed_font=font)
+        assert "@font-face" in svg
+        assert "data:font/woff2;base64," in svg
+
+    def test_missing_embed_font_is_ignored(self, tmp_path):
+        svg = excalidraw_to_svg(
+            _minimal_doc(elements=[_text(text="x")]), embed_font=tmp_path / "nope.ttf"
+        )
+        assert "@font-face" not in svg
+
+    def test_closed_poly_fills_and_closes(self):
+        el = {
+            "id": "p1",
+            "type": "line",
+            "x": 0,
+            "y": 0,
+            "width": 100,
+            "height": 80,
+            "points": [[0, 0], [100, 0], [50, 80]],
+            "polygon": True,
+            "strokeColor": "#1e1e1e",
+            "backgroundColor": "#ffd8a8",
+            "strokeWidth": 2,
+            "strokeStyle": "solid",
+            "opacity": 100,
+            "roughness": 1,
+            "seed": 5,
+            "isDeleted": False,
+        }
+        svg = excalidraw_to_svg(_minimal_doc(elements=[el]))
+        assert 'fill="#ffd8a8"' in svg
+        assert " Z" in svg

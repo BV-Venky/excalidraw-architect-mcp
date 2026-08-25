@@ -1,17 +1,25 @@
 """FastMCP server exposing Excalidraw diagram tools.
 
 Diagram tools:
-  1. create_diagram        -- Build a new diagram from structured node/connection data
+  1. create_diagram        -- Build a diagram of any supported type
   2. mermaid_to_excalidraw -- Convert mermaid flowchart syntax to .excalidraw
   3. modify_diagram        -- Iteratively edit an existing diagram
   4. get_diagram_info      -- Read current diagram state for LLM reasoning
   5. export_diagram        -- Export an .excalidraw file to SVG or PNG
+  6. list_diagram_types    -- Every diagram type with when-to-use guidance
+  7. get_diagram_schema    -- Spec schema for one diagram type
+
+Diagram types come in two shapes. Architecture and flowchart are graphs, built
+from nodes and connections by the Sugiyama layout engine. Everything else is a
+*typed* diagram with its own spec and layout strategy (see ``diagrams``), and
+carries that spec in customData so it can be patched and re-rendered.
 
 Knowledge-graph tools (kg_*): a persistent, version-controlled architecture
 model (default .claude/architecture.md) that is the single source of truth;
 diagrams are rendered views of it. Registered via knowledge.tools.register.
 """
 
+import json
 from typing import Any
 
 from fastmcp import FastMCP
@@ -31,12 +39,24 @@ from excalidraw_mcp.core.models import (
     ShapeType,
     UpdateNodeOp,
 )
+from excalidraw_mcp.diagrams.base import SpecError
+from excalidraw_mcp.diagrams.registry import (
+    DiagramNotFoundError,
+    build_typed_diagram,
+    describe_type,
+    list_types,
+)
 from excalidraw_mcp.engine.layout import compute_layout
 from excalidraw_mcp.engine.renderer import build_excalidraw_file, save_excalidraw
 from excalidraw_mcp.export.svg_exporter import export_to_png, export_to_svg
 from excalidraw_mcp.knowledge.tools import register as register_knowledge_tools
 from excalidraw_mcp.parsers.mermaid import parse_mermaid
 from excalidraw_mcp.parsers.state import apply_modifications, get_diagram_summary
+from excalidraw_mcp.parsers.typed_state import (
+    apply_spec_patch,
+    read_typed_metadata,
+    typed_summary,
+)
 
 mcp = FastMCP(
     "Excalidraw Architect",
@@ -55,19 +75,35 @@ mcp = FastMCP(
 
 @mcp.tool
 def create_diagram(
-    nodes: list[dict[str, Any]],
-    connections: list[dict[str, Any]],
     output_path: str,
+    diagram_type: str = "architecture",
+    spec: dict[str, Any] | None = None,
+    nodes: list[dict[str, Any]] | None = None,
+    connections: list[dict[str, Any]] | None = None,
     direction: str = "LR",
     theme: str = "default",
 ) -> str:
-    """Create a new Excalidraw diagram from structured node and connection data.
+    """Create a new Excalidraw diagram of any supported type.
 
-    The LLM provides a relationship map - this tool handles layout, styling,
-    and rendering. No need to specify coordinates.
+    Two input modes:
+
+    1. **Graph types** (``architecture``, ``flowchart``) - pass ``nodes`` and
+       ``connections``. The tool handles layout, styling, and rendering; no
+       coordinates needed.
+    2. **Typed diagrams** (every other type) - pass ``diagram_type`` and a
+       ``spec`` object shaped for that type. Call ``list_diagram_types`` to
+       choose a type and ``get_diagram_schema`` to see its spec shape.
 
     Args:
-        nodes: List of nodes. Each dict has:
+        output_path: File path to save the .excalidraw file (e.g., "./arch.excalidraw")
+        diagram_type: One of the types from ``list_diagram_types``. Default
+            "architecture". Pick the type that matches what the reader needs
+            to learn, not the one that is easiest to fill in.
+        spec: Type-specific payload. Required for every type other than
+            architecture/flowchart. Every spec accepts optional "title" and
+            "subtitle". Mark 1-2 elements ``"focal": true`` to earn the accent
+            color - marking five erases the signal.
+        nodes: Graph types only. List of nodes. Each dict has:
             - id (str, required): Unique identifier
             - label (str, required): Display text
             - component_type (str, optional): Technology name for auto-styling
@@ -75,19 +111,41 @@ def create_diagram(
               If omitted, the label is used for auto-detection.
             - shape (str, optional): Override shape - "rectangle", "diamond",
               "ellipse", "circle", "stadium", "parallelogram"
-        connections: List of connections. Each dict has:
+        connections: Graph types only. List of connections. Each dict has:
             - from_id (str, required): Source node id
             - to_id (str, required): Target node id
             - label (str, optional): Edge label text
             - style (str, optional): "solid", "dashed", "dotted", "thick"
-        output_path: File path to save the .excalidraw file (e.g., "./arch.excalidraw")
-        direction: Layout direction - "LR" (left-right), "TD" (top-down),
-                   "BT" (bottom-up), "RL" (right-left). Default: "LR"
+        direction: Layout direction for graph types - "LR" (left-right),
+                   "TD" (top-down), "BT" (bottom-up), "RL" (right-left).
         theme: Color theme - "default", "dark", "colorful". Default: "default"
 
     Returns:
         Summary of the created diagram with file path.
     """
+    graph_types = {"architecture", "flowchart"}
+    if diagram_type.lower() not in graph_types or spec is not None:
+        if spec is None:
+            return (
+                f"Error: diagram_type '{diagram_type}' requires a `spec`. "
+                f"Call get_diagram_schema('{diagram_type}') to see its shape."
+            )
+        try:
+            doc, summary = build_typed_diagram(diagram_type, spec, theme=theme)
+        except DiagramNotFoundError as exc:
+            return f"Error: {exc}"
+        except SpecError as exc:
+            return f"Error: {exc}"
+        path = save_excalidraw(doc, output_path)
+        return (
+            f"Created diagram at: {path}\n{summary}\n\n"
+            f"Open with the VS Code Excalidraw extension or drag into excalidraw.com"
+        )
+
+    if not nodes:
+        return "Error: architecture/flowchart diagrams require `nodes`."
+    connections = connections or []
+
     graph_nodes = [
         Node(
             id=n["id"],
@@ -202,6 +260,16 @@ def modify_diagram(
     IMPORTANT: Call get_diagram_info first to understand the current diagram
     state before making modifications.
 
+    For **typed diagrams** (sequence, pyramid, bar, swimlane, ...) there is a
+    single operation:
+
+        {"op": "update_spec", "patch": {"tiers": [...], "title": "New title"}}
+
+    The patch is deep-merged into the stored spec and the diagram re-rendered.
+    Lists are replaced wholesale, so send the complete list to change one
+    entry. The node/connection operations below apply to architecture and
+    flowchart diagrams only.
+
     Args:
         file_path: Path to the existing .excalidraw file.
         operations: Ordered list of operations. Each dict has:
@@ -237,6 +305,23 @@ def modify_diagram(
     Returns:
         Summary of applied modifications.
     """
+    # Typed diagrams are edited by patching their stored spec, not by
+    # reconstructing a node graph -- "add_node" has no meaning on a Venn.
+    if read_typed_metadata(file_path) is not None:
+        patch: dict[str, Any] = {}
+        for op_dict in operations:
+            if op_dict.get("op") != "update_spec":
+                return (
+                    "Error: this is a typed diagram. Use a single operation "
+                    '{"op": "update_spec", "patch": {...}}. Call get_diagram_info '
+                    "first to see the current spec."
+                )
+            patch.update(op_dict.get("patch", {}))
+        try:
+            return apply_spec_patch(file_path, patch, theme=theme)
+        except (SpecError, ValueError) as exc:
+            return f"Error: {exc}"
+
     parsed_ops: list[ModifyOperation] = []
     for op_dict in operations:
         op_type = op_dict.get("op", "")
@@ -303,9 +388,12 @@ def get_diagram_info(file_path: str) -> str:
         file_path: Path to the .excalidraw file.
 
     Returns:
-        Human-readable summary of all nodes and connections.
+        Human-readable summary of all nodes and connections. For typed
+        diagrams (sequence, pyramid, bar, ...) this returns the stored spec,
+        which is what you patch with modify_diagram.
     """
-    return get_diagram_summary(file_path)
+    typed = typed_summary(file_path)
+    return typed or get_diagram_summary(file_path)
 
 
 # ---------------------------------------------------------------------------
@@ -354,6 +442,72 @@ def export_diagram(
         return f"Error: {exc}"
     except Exception as exc:  # noqa: BLE001
         return f"Error during export: {exc}"
+
+
+# ---------------------------------------------------------------------------
+# Tool 6: list_diagram_types
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool
+def list_diagram_types() -> str:
+    """List every supported diagram type with guidance on when to use it.
+
+    Call this BEFORE create_diagram when the right diagram type isn't obvious.
+    Picking the wrong type is the most common way a diagram fails - a
+    swimlane drawn as a flowchart loses the handoffs that were the point.
+
+    Two rules worth applying whatever you pick:
+      - Target density ~4/10. Above 9 nodes it is probably two diagrams.
+      - Mark only 1-2 elements "focal": true. The accent color is a signal,
+        and using it everywhere destroys it.
+
+    Returns:
+        A table of type -> family, when to use it, and when not to.
+    """
+    by_family: dict[str, list[str]] = {}
+    for dt in list_types():
+        by_family.setdefault(dt.family, []).append(
+            f"  {dt.name}\n    use when:  {dt.use_when}\n    avoid when: {dt.avoid_when}"
+        )
+
+    sections = [
+        "architecture / flowchart  (graph family, use `nodes` + `connections`)",
+        "  use when:  Components and the connections between them; decision logic with branches.",
+        "",
+    ]
+    for family in ("structural", "flow", "geometric", "chart"):
+        if family in by_family:
+            sections.append(f"--- {family} ---")
+            sections.extend(by_family[family])
+            sections.append("")
+    sections.append("Call get_diagram_schema(<type>) for the exact spec shape.")
+    return "\n".join(sections)
+
+
+# ---------------------------------------------------------------------------
+# Tool 7: get_diagram_schema
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool
+def get_diagram_schema(diagram_type: str) -> str:
+    """Get the JSON schema and selection guidance for one diagram type.
+
+    Call this before passing a `spec` to create_diagram for a type you have
+    not used yet, so the payload matches on the first attempt.
+
+    Args:
+        diagram_type: A type name from list_diagram_types (e.g. "sequence",
+            "pyramid", "bar", "swimlane").
+
+    Returns:
+        JSON with the spec schema, plus use_when / avoid_when guidance.
+    """
+    try:
+        return json.dumps(describe_type(diagram_type), indent=2)
+    except DiagramNotFoundError as exc:
+        return f"Error: {exc}"
 
 
 # ---------------------------------------------------------------------------
