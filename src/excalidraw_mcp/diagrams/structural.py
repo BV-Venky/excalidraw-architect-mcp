@@ -36,6 +36,7 @@ from excalidraw_mcp.diagrams.base import (
     require,
     shape_style,
     text_width,
+    uniform_box_width,
     zone_style,
 )
 
@@ -398,7 +399,14 @@ class MedallionSpec(TypedSpec):
 
 def layout_medallion(spec: MedallionSpec, pal: Palette) -> list[Drawable]:
     out: list[Drawable] = []
-    tier_w = 250.0
+    tier_w = uniform_box_width(
+        [t.label for t in spec.tiers]
+        + [t.description for t in spec.tiers]
+        + [d for t in spec.tiers for d in t.datasets],
+        min_w=250.0,
+        size=BODY_SIZE,
+        padding=40.0,
+    )
     gap = 84.0
     header_h = 62.0
     row_h = 30.0
@@ -581,7 +589,9 @@ def layout_high_level(spec: HighLevelSpec, pal: Palette) -> list[Drawable]:
     pad = 28.0
     header = 44.0
     row_gap = 18.0
-    item_w = 168.0
+    item_w = uniform_box_width(
+        [name for row in spec.rows for name in row.items], min_w=168.0
+    )
     item_h = 58.0
     item_gap = 14.0
     label_col = 132.0

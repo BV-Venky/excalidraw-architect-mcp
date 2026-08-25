@@ -25,6 +25,7 @@ from excalidraw_mcp.diagrams.base import (
     eyebrow,
     node_box,
     require,
+    uniform_box_width,
     zone_style,
 )
 
@@ -47,10 +48,13 @@ class TimelineSpec(TypedSpec):
 
 
 def layout_timeline(spec: TimelineSpec, pal: Palette) -> list[Drawable]:
-    pitch = 200.0
+    card_w = uniform_box_width(
+        [ev.label for ev in spec.events], min_w=168.0, size=BODY_SIZE
+    )
+    # Keep a gutter between adjacent cards whatever width they settled on.
+    pitch = max(200.0, card_w + 40.0)
     axis_y = 0.0
     span = (len(spec.events) - 1) * pitch
-    card_w = 168.0
     card_h = 64.0
 
     out: list[Drawable] = [
@@ -145,10 +149,6 @@ def layout_quadrant(spec: QuadrantSpec, pal: Palette) -> list[Drawable]:
         for (cx, cy), name in zip(corners, spec.quadrant_labels, strict=False):
             out.append(eyebrow(cx, cy, name, pal, align="center"))
 
-        caption(
-            -52, size / 2, spec.y_axis.label, pal,
-            align="center", muted=False, angle=-math.pi / 2,
-        )
     out.append(caption(size / 2, size + 42, spec.x_axis.label, pal, align="center", muted=False))
     out.append(
         caption(
@@ -375,8 +375,29 @@ class LoopSpec(TypedSpec):
 
 def layout_loop(spec: LoopSpec, pal: Palette) -> list[Drawable]:
     n = len(spec.stations)
-    radius = max(220.0, n * 46.0)
-    box_w, box_h = 168.0, 62.0
+    box_w = uniform_box_width(
+        [s.label for s in spec.stations], min_w=168.0, size=BODY_SIZE
+    )
+    box_h = 62.0
+
+    # The hub is a circle, so its label needs the *inscribed* width, not the
+    # diameter -- text at full width would poke out of the curve.
+    hub_r = 0.0
+    if spec.hub:
+        hub_r = max(
+            92.0, uniform_box_width([spec.hub], min_w=0.0, size=BODY_SIZE) / 1.35
+        )
+
+    # The ring has to clear three things at once: its own arc length (so wide
+    # boxes don't collide with their neighbours), and the hub plus a station's
+    # half-diagonal (so no station lands on top of the hub).
+    station_reach = math.hypot(box_w / 2, box_h / 2)
+    radius = max(
+        220.0,
+        n * 46.0,
+        (box_w + 40.0) * n / (2 * math.pi) * 1.35,
+        hub_r + station_reach + 28.0,
+    )
     cx = cy = radius + box_w / 2
 
     angles = [-math.pi / 2 + 2 * math.pi * i / n for i in range(n)]
@@ -385,7 +406,6 @@ def layout_loop(spec: LoopSpec, pal: Palette) -> list[Drawable]:
     out: list[Drawable] = []
 
     if spec.hub:
-        hub_r = 92.0
         out.append(
             Box(
                 x=cx - hub_r,

@@ -186,6 +186,30 @@ def fit_box_size(
     return max(min_w, w + 44), max(min_h, h + 28)
 
 
+def uniform_box_width(
+    labels: list[str | None],
+    *,
+    min_w: float,
+    max_w: float = 340.0,
+    size: int = LABEL_SIZE,
+    padding: float = 32.0,
+) -> float:
+    """One width that fits every label in a set.
+
+    Types that lay boxes out on a grid -- lane steps, pipeline stages, loop
+    stations, timeline cards -- need a single width to keep their rhythm. A
+    hard-coded constant gives that rhythm but silently clips any label longer
+    than the designer imagined, so derive it from the widest actual label
+    instead. Capped, because one runaway label should wrap rather than stretch
+    every box on the canvas.
+    """
+    widest = max(
+        (_measure_text(label, size)[0] for label in labels if label),
+        default=0.0,
+    )
+    return min(max(min_w, widest + padding), max_w)
+
+
 # ---------------------------------------------------------------------------
 # Layered layout
 # ---------------------------------------------------------------------------
@@ -459,6 +483,7 @@ __all__ = [
     "shape_style",
     "text_width",
     "title_block",
+    "uniform_box_width",
     "zone_style",
     "Field",
 ]

@@ -25,6 +25,7 @@ from excalidraw_mcp.diagrams.base import (
     hairline,
     node_box,
     require,
+    uniform_box_width,
     zone_style,
 )
 
@@ -107,12 +108,13 @@ def _lane_layout(
         "every step's lane must appear in the lane list",
     )
 
+    step_w = uniform_box_width([s.label for s in steps], min_w=_STEP_W)
     col = _lane_columns(steps, connections)
     n_cols = max(col.values()) + 1 if col else 1
     lane_index = {name: i for i, name in enumerate(lanes)}
 
-    lane_extent = _STEP_H + _LANE_PAD * 2 if not vertical else _STEP_W + _LANE_PAD * 2
-    col_pitch = (_STEP_W + _COL_GAP) if not vertical else (_STEP_H + _COL_GAP)
+    lane_extent = _STEP_H + _LANE_PAD * 2 if not vertical else step_w + _LANE_PAD * 2
+    col_pitch = (step_w + _COL_GAP) if not vertical else (_STEP_H + _COL_GAP)
     track_len = n_cols * col_pitch - _COL_GAP + _LANE_PAD * 2
 
     out: list[Drawable] = []
@@ -150,11 +152,11 @@ def _lane_layout(
         if vertical:
             x = _LANE_LABEL + li * lane_extent + _LANE_PAD
             y = _LANE_PAD + c * col_pitch
-            w, h = _STEP_W, _STEP_H
+            w, h = step_w, _STEP_H
         else:
             x = _LANE_LABEL + _LANE_PAD + c * col_pitch
             y = li * lane_extent + _LANE_PAD
-            w, h = _STEP_W, _STEP_H
+            w, h = step_w, _STEP_H
         rects[s.id] = (x, y, w, h)
         out.append(node_box(x, y, w, h, s.label, pal, focal=s.focal, node_id=s.id))
 
@@ -222,7 +224,7 @@ class DataFlowSpec(TypedSpec):
 
 
 def layout_data_flow(spec: DataFlowSpec, pal: Palette) -> list[Drawable]:
-    step_w = 186.0
+    step_w = uniform_box_width([s.label for s in spec.steps], min_w=186.0)
     step_h = 74.0
     gap = 70.0
     out: list[Drawable] = []
@@ -266,11 +268,17 @@ class DpIntegrationSpec(TypedSpec):
 
 
 def layout_dp_integration(spec: DpIntegrationSpec, pal: Palette) -> list[Drawable]:
-    box_w = 176.0
+    box_w = uniform_box_width(
+        [i.label for i in [*spec.sources, *spec.consumers]],
+        min_w=176.0,
+        size=BODY_SIZE,
+    )
     box_h = 58.0
     v_gap = 18.0
     col_gap = 130.0
-    core_w = 230.0
+    core_w = uniform_box_width(
+        [spec.core.label, *spec.core.components], min_w=230.0, padding=56.0
+    )
     core_pad = 22.0
     core_header = 44.0
     comp_h = 46.0
