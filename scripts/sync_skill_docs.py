@@ -64,7 +64,7 @@ def types_reference() -> str:
         "type's spec model, then re-run the script.",
         "",
         "Every spec also accepts `title` and `subtitle`. Mark one or two",
-        "elements `\"focal\": true` — no more.",
+        'elements `"focal": true` — no more.',
         "",
     ]
 

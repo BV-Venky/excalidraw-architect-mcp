@@ -277,9 +277,7 @@ class TestSketchRenderer:
         assert svg.count("<path") >= 2
 
     def test_transparent_background_emits_no_fill_path(self):
-        svg = excalidraw_to_svg(
-            _minimal_doc(elements=[_rect(backgroundColor="transparent")])
-        )
+        svg = excalidraw_to_svg(_minimal_doc(elements=[_rect(backgroundColor="transparent")]))
         assert 'stroke="none"' not in svg
 
     def test_prng_matches_javascript_semantics(self):
@@ -304,9 +302,7 @@ class TestSketchRenderer:
     def test_embedded_font_is_inlined(self, tmp_path):
         font = tmp_path / "fake.woff2"
         font.write_bytes(b"not-a-real-font")
-        svg = excalidraw_to_svg(
-            _minimal_doc(elements=[_text(text="Orders")]), embed_font=font
-        )
+        svg = excalidraw_to_svg(_minimal_doc(elements=[_text(text="Orders")]), embed_font=font)
         assert "@font-face" in svg
         assert "data:font/woff2;base64," in svg
 

@@ -67,12 +67,11 @@ def layout_tree(spec: TreeSpec, pal: Palette) -> list[Drawable]:
     graph = DiagramGraph(
         nodes=[Node(id=n.id, label=n.label) for n in spec.nodes],
         edges=[
-            Edge(from_id=n.parent, to_id=n.id)
-            for n in spec.nodes
-            if n.parent and n.parent in ids
+            Edge(from_id=n.parent, to_id=n.id) for n in spec.nodes if n.parent and n.parent in ids
         ],
-        direction=Direction(spec.direction.upper()) if spec.direction.upper() in
-        {d.value for d in Direction} else Direction.TOP_DOWN,
+        direction=Direction(spec.direction.upper())
+        if spec.direction.upper() in {d.value for d in Direction}
+        else Direction.TOP_DOWN,
     )
     layout = build_graph_layout(graph)
     return graph_to_drawables(layout, pal, focal_ids={n.id for n in spec.nodes if n.focal})
@@ -156,14 +155,13 @@ def layout_state(spec: StateSpec, pal: Palette) -> list[Drawable]:
             for t in flow
             if t.from_id in ids and t.to_id in ids
         ],
-        direction=Direction(spec.direction.upper()) if spec.direction.upper() in
-        {d.value for d in Direction} else Direction.TOP_DOWN,
+        direction=Direction(spec.direction.upper())
+        if spec.direction.upper() in {d.value for d in Direction}
+        else Direction.TOP_DOWN,
     )
     layout = build_graph_layout(graph)
     kinds = {s.id: s.kind for s in spec.states}
-    out = graph_to_drawables(
-        layout, pal, focal_ids={s.id for s in spec.states if s.focal}
-    )
+    out = graph_to_drawables(layout, pal, focal_ids={s.id for s in spec.states if s.focal})
 
     rects = {pn.node.id: pn for pn in layout.nodes}
 
@@ -372,9 +370,7 @@ def layout_layers(spec: LayersSpec, pal: Palette) -> list[Drawable]:
             )
         )
         if layer.note:
-            out.append(
-                caption(spec.width + 20, y + row_h / 2 - BODY_SIZE / 2, layer.note, pal)
-            )
+            out.append(caption(spec.width + 20, y + row_h / 2 - BODY_SIZE / 2, layer.note, pal))
         y += row_h + (8 if spec.show_dividers else 0)
     return out
 
@@ -589,9 +585,7 @@ def layout_high_level(spec: HighLevelSpec, pal: Palette) -> list[Drawable]:
     pad = 28.0
     header = 44.0
     row_gap = 18.0
-    item_w = uniform_box_width(
-        [name for row in spec.rows for name in row.items], min_w=168.0
-    )
+    item_w = uniform_box_width([name for row in spec.rows for name in row.items], min_w=168.0)
     item_h = 58.0
     item_gap = 14.0
     label_col = 132.0

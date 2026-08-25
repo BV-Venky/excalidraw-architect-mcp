@@ -276,9 +276,7 @@ def layout_dp_integration(spec: DpIntegrationSpec, pal: Palette) -> list[Drawabl
     box_h = 58.0
     v_gap = 18.0
     col_gap = 130.0
-    core_w = uniform_box_width(
-        [spec.core.label, *spec.core.components], min_w=230.0, padding=56.0
-    )
+    core_w = uniform_box_width([spec.core.label, *spec.core.components], min_w=230.0, padding=56.0)
     core_pad = 22.0
     core_header = 44.0
     comp_h = 46.0
@@ -429,9 +427,7 @@ def layout_sequence(spec: SequenceSpec, pal: Palette) -> list[Drawable]:
     # them rather than asking for explicit open/close pairs makes the "bar that
     # never closes" anti-pattern unrepresentable.
     for actor in spec.actors:
-        involved = [
-            i for i, m in enumerate(spec.messages) if actor.id in (m.from_id, m.to_id)
-        ]
+        involved = [i for i, m in enumerate(spec.messages) if actor.id in (m.from_id, m.to_id)]
         if len(involved) < 2:
             continue
         top = _SEQ_TOP + involved[0] * _MSG_GAP - 10

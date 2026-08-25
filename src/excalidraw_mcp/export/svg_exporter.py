@@ -134,8 +134,7 @@ def _stroke_attrs(el: dict[str, Any]) -> str:
     dash = _stroke_dasharray(ss, sw)
     return (
         f'stroke="{_esc(sc)}" stroke-width="{sw}" fill="none" '
-        f'stroke-linecap="round" stroke-linejoin="round"'
-        + (f" {dash}" if dash else "")
+        f'stroke-linecap="round" stroke-linejoin="round"' + (f" {dash}" if dash else "")
     )
 
 
@@ -159,9 +158,7 @@ def _sketch_shape(
     if bg != "none" and closed:
         fill_d = sketch.solid_fill(outline, o, rng)
         if fill_d:
-            parts.append(
-                f'<path d="{fill_d}" fill="{_esc(bg)}" stroke="none" opacity="{op:.2f}"/>'
-            )
+            parts.append(f'<path d="{fill_d}" fill="{_esc(bg)}" stroke="none" opacity="{op:.2f}"/>')
 
     if smooth:
         stroke_d = sketch.curved_path(outline, o, rng, closed=closed)
@@ -201,9 +198,7 @@ def _render_ellipse(el: dict[str, Any], ox: float, oy: float) -> str:
     if bg != "none" and core:
         fill_d = sketch.solid_fill(core, o, rng)
         if fill_d:
-            parts.append(
-                f'<path d="{fill_d}" fill="{_esc(bg)}" stroke="none" opacity="{op:.2f}"/>'
-            )
+            parts.append(f'<path d="{fill_d}" fill="{_esc(bg)}" stroke="none" opacity="{op:.2f}"/>')
     if stroke_d:
         parts.append(f'<path d="{stroke_d}" {_stroke_attrs(el)} opacity="{op:.2f}"/>')
     return "".join(parts)
@@ -371,9 +366,7 @@ def _render_arrow(el: dict[str, Any], ox: float, oy: float) -> str:
     # Heads never inherit the shaft's dash pattern -- a dashed arrowhead reads
     # as a broken one.
     head_attrs = _stroke_attrs({**el, "strokeStyle": "solid"})
-    parts += [
-        f'<path d="{d}" {head_attrs} opacity="{op:.2f}"/>' for d in heads if d
-    ]
+    parts += [f'<path d="{d}" {head_attrs} opacity="{op:.2f}"/>' for d in heads if d]
     return "".join(parts)
 
 

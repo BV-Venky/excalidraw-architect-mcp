@@ -159,9 +159,7 @@ def _points_element(
 def _build_poly(poly: Poly, groups: _Groups) -> list[dict[str, Any]]:
     if len(poly.points) < 2:
         return []
-    el = _points_element(
-        "line", poly.points, poly.style, closed=poly.closed, curved=poly.curved
-    )
+    el = _points_element("line", poly.points, poly.style, closed=poly.closed, curved=poly.curved)
     el["groupIds"] = groups.get(poly.group)
     if poly.closed:
         # A closed line is what gives us triangles and trapezoids; Excalidraw
@@ -179,9 +177,7 @@ def _polyline_midpoint(points: list[tuple[float, float]]) -> tuple[float, float]
     two-point connector's "middle" index is its endpoint, which parks every
     label on top of the target shape.
     """
-    lengths = [
-        math.dist(points[i], points[i + 1]) for i in range(len(points) - 1)
-    ]
+    lengths = [math.dist(points[i], points[i + 1]) for i in range(len(points) - 1)]
     total = sum(lengths)
     if total == 0:
         return points[0]

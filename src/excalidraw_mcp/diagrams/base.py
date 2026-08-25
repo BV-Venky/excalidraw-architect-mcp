@@ -169,9 +169,7 @@ def caption(
 
 def eyebrow(x: float, y: float, text: str, pal: Palette, *, align: str = "left") -> Text:
     """Small uppercase label used for lane names, phases, and section tags."""
-    return Text(
-        x=x, y=y, text=text.upper(), size=EYEBROW_SIZE, color=pal.muted, align=align
-    )
+    return Text(x=x, y=y, text=text.upper(), size=EYEBROW_SIZE, color=pal.muted, align=align)
 
 
 def text_width(text: str, size: int = BODY_SIZE) -> float:
@@ -295,9 +293,7 @@ def layered_positions(
     cursor = 0.0
     for idx in sorted(by_layer):
         main_offset[idx] = cursor
-        extent = max(
-            (sizes[k][0] if horizontal else sizes[k][1]) for k in by_layer[idx]
-        )
+        extent = max((sizes[k][0] if horizontal else sizes[k][1]) for k in by_layer[idx])
         cursor += extent + gap_main
 
     positions: dict[str, tuple[float, float]] = {}

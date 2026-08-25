@@ -221,8 +221,12 @@ def test_swimlane_rejects_step_in_undeclared_lane():
 
 
 def test_tree_requires_a_root():
-    spec = {"nodes": [{"id": "a", "label": "A", "parent": "b"},
-                      {"id": "b", "label": "B", "parent": "a"}]}
+    spec = {
+        "nodes": [
+            {"id": "a", "label": "A", "parent": "b"},
+            {"id": "b", "label": "B", "parent": "a"},
+        ]
+    }
     with pytest.raises(SpecError, match="root"):
         build_typed_diagram("tree", spec)
 
@@ -264,9 +268,7 @@ def test_swimlane_same_lane_steps_never_share_a_column():
         ],
     }
     doc, _ = build_typed_diagram("swimlane", spec)
-    boxes = [
-        el for el in doc["elements"] if el.get("customData", {}).get("node_id")
-    ]
+    boxes = [el for el in doc["elements"] if el.get("customData", {}).get("node_id")]
     xs = sorted((el["x"], el["x"] + el["width"]) for el in boxes)
     assert all(a[1] <= b[0] for a, b in zip(xs, xs[1:], strict=False))
 
@@ -372,9 +374,7 @@ def test_polyline_midpoint_is_halfway_by_arc_length():
 def test_connector_label_sits_at_the_midpoint_not_the_target():
     from excalidraw_mcp.core.drawable import Connector
 
-    elements = drawables_to_elements(
-        [Connector(points=[(0, 0), (200, 0)], label="mid")]
-    )
+    elements = drawables_to_elements([Connector(points=[(0, 0), (200, 0)], label="mid")])
     label = next(el for el in elements if el["type"] == "text")
     assert 80 < label["x"] + label["width"] / 2 < 120
 
@@ -491,10 +491,7 @@ def test_every_type_appears_in_the_skill_selection_table():
     from pathlib import Path
 
     skill = (
-        Path(__file__).resolve().parent.parent
-        / "skills"
-        / "excalidraw-architect"
-        / "SKILL.md"
+        Path(__file__).resolve().parent.parent / "skills" / "excalidraw-architect" / "SKILL.md"
     ).read_text(encoding="utf-8")
     table = skill.split("<!-- BEGIN:selection-table -->")[1].split("<!-- END")[0]
     for name in ALL_TYPES:

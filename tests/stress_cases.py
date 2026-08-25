@@ -67,10 +67,7 @@ STRESS_CASES: dict[str, list[Case]] = {
             {
                 "nodes": [
                     {"id": "lb", "label": "Nginx"},
-                    *[
-                        {"id": f"svc{i}", "label": f"Service {i}"}
-                        for i in range(1, 9)
-                    ],
+                    *[{"id": f"svc{i}", "label": f"Service {i}"} for i in range(1, 9)],
                     {"id": "pg", "label": "PostgreSQL"},
                     {"id": "redis", "label": "Redis"},
                     {"id": "kafka", "label": "Kafka"},
@@ -211,9 +208,7 @@ STRESS_CASES: dict[str, list[Case]] = {
             "spec",
             {
                 "title": "Enterprise integration topology",
-                "sources": [
-                    {"label": f"Source system {i}"} for i in range(1, 9)
-                ],
+                "sources": [{"label": f"Source system {i}"} for i in range(1, 9)],
                 "core": {
                     "label": "Integration hub",
                     "components": ["Ingest", "Transform", "Serve", "Govern"],
@@ -236,8 +231,10 @@ STRESS_CASES: dict[str, list[Case]] = {
             {
                 "title": "Long source and consumer names",
                 "sources": [{"label": "Salesforce Marketing Cloud"}],
-                "core": {"label": "Enterprise data platform",
-                         "components": ["Ingestion and validation layer"]},
+                "core": {
+                    "label": "Enterprise data platform",
+                    "components": ["Ingestion and validation layer"],
+                },
                 "consumers": [{"label": "Executive reporting workspace"}],
             },
         ),
@@ -416,10 +413,16 @@ STRESS_CASES: dict[str, list[Case]] = {
                 "title": "Labels that exceed the fixed step width",
                 "lanes": ["Platform engineering", "Security review"],
                 "steps": [
-                    {"id": "a", "label": "Provision isolated staging namespace",
-                     "lane": "Platform engineering"},
-                    {"id": "b", "label": "Complete threat model sign-off",
-                     "lane": "Security review"},
+                    {
+                        "id": "a",
+                        "label": "Provision isolated staging namespace",
+                        "lane": "Platform engineering",
+                    },
+                    {
+                        "id": "b",
+                        "label": "Complete threat model sign-off",
+                        "lane": "Security review",
+                    },
                 ],
                 "connections": [{"from_id": "a", "to_id": "b"}],
             },
@@ -477,9 +480,7 @@ STRESS_CASES: dict[str, list[Case]] = {
                     {"id": "s7", "label": "Execute", "lane": "Release"},
                     {"id": "s8", "label": "Verify", "lane": "Engineer"},
                 ],
-                "connections": [
-                    {"from_id": f"s{i}", "to_id": f"s{i + 1}"} for i in range(1, 8)
-                ],
+                "connections": [{"from_id": f"s{i}", "to_id": f"s{i + 1}"} for i in range(1, 8)],
             },
         ),
         (
@@ -489,10 +490,12 @@ STRESS_CASES: dict[str, list[Case]] = {
                 "title": "Long step labels",
                 "actors": ["Requesting team", "Platform"],
                 "steps": [
-                    {"id": "a", "label": "Submit capacity increase request",
-                     "lane": "Requesting team"},
-                    {"id": "b", "label": "Validate quota against budget",
-                     "lane": "Platform"},
+                    {
+                        "id": "a",
+                        "label": "Submit capacity increase request",
+                        "lane": "Requesting team",
+                    },
+                    {"id": "b", "label": "Validate quota against budget", "lane": "Platform"},
                 ],
                 "connections": [{"from_id": "a", "to_id": "b"}],
             },
@@ -780,9 +783,7 @@ STRESS_CASES: dict[str, list[Case]] = {
             "spec",
             {
                 "title": "Deep hierarchy",
-                "tiers": [
-                    {"label": f"Level {i}"} for i in range(1, 7)
-                ],
+                "tiers": [{"label": f"Level {i}"} for i in range(1, 7)],
             },
         ),
     ],
@@ -792,9 +793,7 @@ STRESS_CASES: dict[str, list[Case]] = {
             "spec",
             {
                 "sets": [{"label": "Batch"}, {"label": "Streaming"}],
-                "intersections": [
-                    {"between": ["Batch", "Streaming"], "label": "Lambda arch"}
-                ],
+                "intersections": [{"between": ["Batch", "Streaming"], "label": "Lambda arch"}],
             },
         ),
         (
@@ -982,8 +981,21 @@ STRESS_CASES: dict[str, list[Case]] = {
                     {
                         "name": "latency",
                         "values": [
-                            120, 118, 125, 130, 128, 140, 155, 149,
-                            138, 132, 126, 121, 119, 115, 110,
+                            120,
+                            118,
+                            125,
+                            130,
+                            128,
+                            140,
+                            155,
+                            149,
+                            138,
+                            132,
+                            126,
+                            121,
+                            119,
+                            115,
+                            110,
                         ],
                     }
                 ],
@@ -1028,9 +1040,7 @@ STRESS_CASES: dict[str, list[Case]] = {
             "spec",
             {
                 "title": "Thirty samples",
-                "points": [
-                    {"x": (i * 7) % 40, "y": (i * 13) % 55} for i in range(1, 31)
-                ],
+                "points": [{"x": (i * 7) % 40, "y": (i * 13) % 55} for i in range(1, 31)],
             },
         ),
         (
@@ -1207,12 +1217,16 @@ STRESS_CASES: dict[str, list[Case]] = {
             {
                 "title": "Tier names and datasets that overflow",
                 "tiers": [
-                    {"label": "Bronze landing zone",
-                     "description": "immutable append-only capture",
-                     "datasets": ["salesforce_opportunity_history"]},
-                    {"label": "Gold serving layer",
-                     "description": "business ready aggregates",
-                     "datasets": ["daily_revenue_by_region"]},
+                    {
+                        "label": "Bronze landing zone",
+                        "description": "immutable append-only capture",
+                        "datasets": ["salesforce_opportunity_history"],
+                    },
+                    {
+                        "label": "Gold serving layer",
+                        "description": "business ready aggregates",
+                        "datasets": ["daily_revenue_by_region"],
+                    },
                 ],
             },
         ),
@@ -1238,8 +1252,11 @@ STRESS_CASES: dict[str, list[Case]] = {
                 "title": "Order model",
                 "entities": [
                     {"name": "Customer", "fields": ["id PK", "email", "tier"]},
-                    {"name": "Order", "fields": ["id PK", "customer_id FK", "status", "total"],
-                     "focal": True},
+                    {
+                        "name": "Order",
+                        "fields": ["id PK", "customer_id FK", "status", "total"],
+                        "focal": True,
+                    },
                     {"name": "OrderLine", "fields": ["id PK", "order_id FK", "sku", "qty"]},
                     {"name": "Product", "fields": ["sku PK", "name", "price"]},
                 ],
@@ -1259,8 +1276,16 @@ STRESS_CASES: dict[str, list[Case]] = {
                     {
                         "name": "Account",
                         "fields": [
-                            "id PK", "external_id", "email", "phone", "country",
-                            "created_at", "updated_at", "deleted_at", "tier", "status",
+                            "id PK",
+                            "external_id",
+                            "email",
+                            "phone",
+                            "country",
+                            "created_at",
+                            "updated_at",
+                            "deleted_at",
+                            "tier",
+                            "status",
                         ],
                     },
                     {"name": "AuditLog", "fields": ["id PK", "account_id FK", "action", "at"]},
@@ -1336,11 +1361,7 @@ STRESS_CASES: dict[str, list[Case]] = {
         (
             "01-one-group",
             "spec",
-            {
-                "groups": [
-                    {"label": "Finance", "items": [{"id": "erp", "label": "Legacy ERP"}]}
-                ]
-            },
+            {"groups": [{"label": "Finance", "items": [{"id": "erp", "label": "Legacy ERP"}]}]},
         ),
         (
             "02-departments",
@@ -1443,10 +1464,7 @@ STRESS_CASES: dict[str, list[Case]] = {
             {
                 "title": "One parent, eight children",
                 "nodes": [{"id": "root", "label": "Config"}]
-                + [
-                    {"id": f"c{i}", "label": f"Source {i}", "parent": "root"}
-                    for i in range(1, 9)
-                ],
+                + [{"id": f"c{i}", "label": f"Source {i}", "parent": "root"} for i in range(1, 9)],
             },
         ),
     ],
@@ -1469,13 +1487,21 @@ STRESS_CASES: dict[str, list[Case]] = {
                 "people": [
                     {"id": "cto", "name": "Priya Raman", "role": "CTO"},
                     {"id": "eng", "name": "Marcus Webb", "role": "VP Eng", "reports_to": "cto"},
-                    {"id": "sec", "name": "Lena Fischer", "role": "Head of Security",
-                     "reports_to": "cto", "focal": True},
+                    {
+                        "id": "sec",
+                        "name": "Lena Fischer",
+                        "role": "Head of Security",
+                        "reports_to": "cto",
+                        "focal": True,
+                    },
                     {"id": "plat", "name": "Platform", "role": "6 engineers", "reports_to": "eng"},
-                    {"id": "prod", "name": "Product Eng", "role": "9 engineers",
-                     "reports_to": "eng"},
-                    {"id": "appsec", "name": "AppSec", "role": "2 engineers",
-                     "reports_to": "sec"},
+                    {
+                        "id": "prod",
+                        "name": "Product Eng",
+                        "role": "9 engineers",
+                        "reports_to": "eng",
+                    },
+                    {"id": "appsec", "name": "AppSec", "role": "2 engineers", "reports_to": "sec"},
                 ],
             },
         ),

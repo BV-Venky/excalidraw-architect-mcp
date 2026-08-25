@@ -101,9 +101,7 @@ class Path:
         self._parts.append(f"L {_fmt(x)} {_fmt(y)}")
 
     def curve(self, x1: float, y1: float, x2: float, y2: float, x: float, y: float) -> None:
-        self._parts.append(
-            f"C {_fmt(x1)} {_fmt(y1)}, {_fmt(x2)} {_fmt(y2)}, {_fmt(x)} {_fmt(y)}"
-        )
+        self._parts.append(f"C {_fmt(x1)} {_fmt(y1)}, {_fmt(x2)} {_fmt(y2)}, {_fmt(x)} {_fmt(y)}")
 
     def close(self) -> None:
         self._parts.append("Z")
@@ -324,9 +322,7 @@ def ellipse(
     cx: float, cy: float, width: float, height: float, o: Rough, rng: Rng
 ) -> tuple[str, list[Point]]:
     """Sketchy ellipse. Returns (stroke path, core points for filling)."""
-    perimeter = math.sqrt(
-        math.pi * 2 * math.sqrt(((width / 2) ** 2 + (height / 2) ** 2) / 2)
-    )
+    perimeter = math.sqrt(math.pi * 2 * math.sqrt(((width / 2) ** 2 + (height / 2) ** 2) / 2))
     step_count = max(o.curve_step_count, (o.curve_step_count / math.sqrt(200)) * perimeter)
     increment = (math.pi * 2) / step_count
 

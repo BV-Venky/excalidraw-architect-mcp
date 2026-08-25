@@ -302,7 +302,5 @@ def layout_scatter(spec: ScatterSpec, pal: Palette) -> list[Drawable]:
 
     out.extend(_axis_titles(spec.x_label, spec.y_label, pal, width=PLOT_W, height=PLOT_H))
     if groups:
-        out.extend(
-            _legend([Series(name=g, values=[]) for g in groups], pal, PLOT_H + 82)
-        )
+        out.extend(_legend([Series(name=g, values=[]) for g in groups], pal, PLOT_H + 82))
     return out

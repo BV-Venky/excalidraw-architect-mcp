@@ -48,9 +48,7 @@ class TimelineSpec(TypedSpec):
 
 
 def layout_timeline(spec: TimelineSpec, pal: Palette) -> list[Drawable]:
-    card_w = uniform_box_width(
-        [ev.label for ev in spec.events], min_w=168.0, size=BODY_SIZE
-    )
+    card_w = uniform_box_width([ev.label for ev in spec.events], min_w=168.0, size=BODY_SIZE)
     # Keep a gutter between adjacent cards whatever width they settled on.
     pitch = max(200.0, card_w + 40.0)
     axis_y = 0.0
@@ -91,8 +89,14 @@ def layout_timeline(spec: TimelineSpec, pal: Palette) -> list[Drawable]:
         )
         out.append(
             node_box(
-                x - card_w / 2, cy, card_w, card_h, ev.label, pal,
-                focal=ev.focal, size=BODY_SIZE,
+                x - card_w / 2,
+                cy,
+                card_w,
+                card_h,
+                ev.label,
+                pal,
+                focal=ev.focal,
+                size=BODY_SIZE,
             )
         )
         if ev.when:
@@ -152,8 +156,13 @@ def layout_quadrant(spec: QuadrantSpec, pal: Palette) -> list[Drawable]:
     out.append(caption(size / 2, size + 42, spec.x_axis.label, pal, align="center", muted=False))
     out.append(
         caption(
-            -52, size / 2, spec.y_axis.label, pal,
-            align="center", muted=False, angle=-math.pi / 2,
+            -52,
+            size / 2,
+            spec.y_axis.label,
+            pal,
+            align="center",
+            muted=False,
+            angle=-math.pi / 2,
         )
     )
     if spec.x_axis.low:
@@ -186,8 +195,13 @@ def layout_quadrant(spec: QuadrantSpec, pal: Palette) -> list[Drawable]:
         )
         out.append(
             caption(
-                px + 14, py - 8, item.label, pal, size=BODY_SIZE,
-                muted=not item.focal, focal=item.focal,
+                px + 14,
+                py - 8,
+                item.label,
+                pal,
+                size=BODY_SIZE,
+                muted=not item.focal,
+                focal=item.focal,
             )
         )
     return out
@@ -221,8 +235,7 @@ def layout_pyramid(spec: PyramidSpec, pal: Palette) -> list[Drawable]:
 
     if funnel:
         values = [
-            t.value if t.value is not None else float(n - i)
-            for i, t in enumerate(spec.tiers)
+            t.value if t.value is not None else float(n - i) for i, t in enumerate(spec.tiers)
         ]
         top = max(values) or 1.0
         widths = [max(90.0, base_w * (v / top)) for v in values]
@@ -267,9 +280,7 @@ def layout_pyramid(spec: PyramidSpec, pal: Palette) -> list[Drawable]:
         side = max(bot_half, top_half)
         annotation = tier.note or (f"{tier.value:g}" if tier.value is not None else None)
         if annotation:
-            out.append(
-                caption(cx + side + 20, y + tier_h / 2 - 8, annotation, pal, size=BODY_SIZE)
-            )
+            out.append(caption(cx + side + 20, y + tier_h / 2 - 8, annotation, pal, size=BODY_SIZE))
     return out
 
 
@@ -331,9 +342,7 @@ def layout_venn(spec: VennSpec, pal: Palette) -> list[Drawable]:
         else:
             offsets = [(-r * 0.62, -r * 0.35), (r * 0.62, -r * 0.35), (0.0, r * 0.62)]
             tx, ty = cx + offsets[i][0], cy + offsets[i][1]
-        out.append(
-            Text(x=tx, y=ty, text=s.label, size=LABEL_SIZE, color=color, align="center")
-        )
+        out.append(Text(x=tx, y=ty, text=s.label, size=LABEL_SIZE, color=color, align="center"))
 
     label_of = {s.label: i for i, s in enumerate(spec.sets)}
     for inter in spec.intersections:
@@ -354,9 +363,7 @@ def layout_venn(spec: VennSpec, pal: Palette) -> list[Drawable]:
             cx += vx / dist * r * 0.52
             cy += vy / dist * r * 0.52
 
-        out.append(
-            Text(x=cx, y=cy, text=inter.label, size=12, color=pal.ink, align="center")
-        )
+        out.append(Text(x=cx, y=cy, text=inter.label, size=12, color=pal.ink, align="center"))
     return out
 
 
@@ -375,18 +382,14 @@ class LoopSpec(TypedSpec):
 
 def layout_loop(spec: LoopSpec, pal: Palette) -> list[Drawable]:
     n = len(spec.stations)
-    box_w = uniform_box_width(
-        [s.label for s in spec.stations], min_w=168.0, size=BODY_SIZE
-    )
+    box_w = uniform_box_width([s.label for s in spec.stations], min_w=168.0, size=BODY_SIZE)
     box_h = 62.0
 
     # The hub is a circle, so its label needs the *inscribed* width, not the
     # diameter -- text at full width would poke out of the curve.
     hub_r = 0.0
     if spec.hub:
-        hub_r = max(
-            92.0, uniform_box_width([spec.hub], min_w=0.0, size=BODY_SIZE) / 1.35
-        )
+        hub_r = max(92.0, uniform_box_width([spec.hub], min_w=0.0, size=BODY_SIZE) / 1.35)
 
     # The ring has to clear three things at once: its own arc length (so wide
     # boxes don't collide with their neighbours), and the hub plus a station's
@@ -416,9 +419,7 @@ def layout_loop(spec: LoopSpec, pal: Palette) -> list[Drawable]:
                 label=spec.hub,
                 label_size=BODY_SIZE,
                 label_color=pal.accent,
-                style=Style(
-                    stroke=pal.accent, fill=pal.accent_soft, stroke_width=2, roughness=1
-                ),
+                style=Style(stroke=pal.accent, fill=pal.accent_soft, stroke_width=2, roughness=1),
             )
         )
     # Ring arrows first so the station boxes cover their endpoints. The angular
@@ -437,9 +438,7 @@ def layout_loop(spec: LoopSpec, pal: Palette) -> list[Drawable]:
         mid_a = (a1 + a2) / 2
         bulge = radius * 1.04
         mid = (cx + bulge * math.cos(mid_a), cy + bulge * math.sin(mid_a))
-        out.append(
-            Connector(points=[start, mid, end], style=connector_style(pal), curved=True)
-        )
+        out.append(Connector(points=[start, mid, end], style=connector_style(pal), curved=True))
 
     for i, (station, (sx, sy)) in enumerate(zip(spec.stations, centers, strict=False)):
         out.append(
@@ -474,9 +473,7 @@ def layout_loop(spec: LoopSpec, pal: Palette) -> list[Drawable]:
     if spec.hub and spec.hub_note:
         # Below the whole ring, not under the hub -- under the hub it lands on
         # top of the write-back arrows converging there.
-        out.append(
-            caption(cx, cy + radius + box_h, spec.hub_note, pal, size=12, align="center")
-        )
+        out.append(caption(cx, cy + radius + box_h, spec.hub_note, pal, size=12, align="center"))
     return out
 
 

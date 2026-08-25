@@ -177,9 +177,7 @@ def check_no_partial_overlap(case: str, doc: dict[str, Any], rep: Report) -> Non
     boxes = [
         e
         for e in _visible(doc)
-        if e["type"] in ("rectangle", "ellipse", "diamond")
-        and e["width"] > 24
-        and e["height"] > 18
+        if e["type"] in ("rectangle", "ellipse", "diamond") and e["width"] > 24 and e["height"] > 18
     ]
     for i, a in enumerate(boxes):
         ax0, ay0, ax1, ay1 = _extent(a)
@@ -199,8 +197,7 @@ def check_no_partial_overlap(case: str, doc: dict[str, Any], rep: Report) -> Non
                 rep.add(
                     case,
                     "partial-overlap",
-                    f"{a['type']} and {b['type']} intersect by "
-                    f"{ox:.0f}x{oy:.0f}px without nesting",
+                    f"{a['type']} and {b['type']} intersect by {ox:.0f}x{oy:.0f}px without nesting",
                 )
                 return
 
@@ -257,12 +254,10 @@ def build_graph_doc(payload: dict[str, Any]) -> dict[str, Any]:
     return build_excalidraw_file(compute_layout(graph), direction=graph.direction)
 
 
-def write_index(
-    path: Path, title: str, entries: list[tuple[str, str, str]], up: str = ""
-) -> None:
+def write_index(path: Path, title: str, entries: list[tuple[str, str, str]], up: str = "") -> None:
     """Write a contact sheet. Entries are (caption, link target, image src)."""
     cards = "\n".join(
-        f'    <figure><figcaption>{html.escape(name)}</figcaption>'
+        f"    <figure><figcaption>{html.escape(name)}</figcaption>"
         f'<a href="{href}"><img src="{img}" alt="{html.escape(name)}"></a></figure>'
         for name, href, img in entries
     )
@@ -334,8 +329,10 @@ def main() -> int:
 
         if entries:
             write_index(
-                out_dir / "index.html", f"{diagram_type} — {len(entries)} cases",
-                entries, up="../index.html",
+                out_dir / "index.html",
+                f"{diagram_type} — {len(entries)} cases",
+                entries,
+                up="../index.html",
             )
             type_entries.append(
                 (
